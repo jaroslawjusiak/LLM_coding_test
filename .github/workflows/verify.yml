@@ -49,6 +49,7 @@ jobs:
       - name: Verify C# tasks
         run: |
           set -uo pipefail
+          mkdir -p verify-logs
           failed=""
           for id in \
             BLD-001 BLD-002 BLD-003 BLD-004 BLD-005 \
@@ -60,7 +61,7 @@ jobs:
             SYN-001 SYN-002 SYN-003 SYN-004
           do
             echo "::group::$id"
-            if node harness/src/cli.ts verify --task "$id"; then
+            if node harness/src/cli.ts verify --task "$id" 2>&1 | tee "verify-logs/$id.log"; then
               echo "$id: PASS" >> "$GITHUB_STEP_SUMMARY"
             else
               echo "::error::$id verify failed"
@@ -73,5 +74,17 @@ jobs:
             echo "Failed tasks:$failed"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "Failed tasks:$failed" >> "$GITHUB_STEP_SUMMARY"
+            echo "::group::Failed task logs"
+            for id in $failed; do
+              echo "===== $id ====="
+              cat "verify-logs/$id.log"
+            done
+            echo "::endgroup::"
             exit 1
           fi
+      - name: Upload verify logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: csharp-verify-logs
+          path: verify-logs/
