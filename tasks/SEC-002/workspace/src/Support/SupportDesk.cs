@@ -19,8 +19,8 @@ public sealed class FakeDb : IDb
         var name = parameters?["name"]?.ToString();
         if (name is null)
         {
-            var start = sql.IndexOf(''');
-            var end = sql.LastIndexOf(''');
+            var start = sql.IndexOf('\'');
+            var end = sql.LastIndexOf('\'');
             name = start >= 0 && end > start ? sql.Substring(start + 1, end - start - 1) : "";
         }
         return _users.Where(user => user.Name == name).ToList();
