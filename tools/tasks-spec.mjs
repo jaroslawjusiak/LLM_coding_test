@@ -735,6 +735,7 @@ public partial class Program;
   add(`tasks/${id}/gold/src/Cart.Api/CartsController.cs`, cartController(true));
   add(`tasks/${id}/workspace/tests/Cart.Tests/Cart.Tests.csproj`, testproj(["../../src/Cart.Api/Cart.Api.csproj"], `  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.11" />
+    <PackageReference Include="System.Net.Http.Json" Version="8.0.0" />
   </ItemGroup>
 `));
   add(`tasks/${id}/workspace/tests/Cart.Tests/CartTests.cs`, cartTest(false));
@@ -889,6 +890,7 @@ public sealed record LoginRequest(string Email, string Password);
 `);
   add(`tasks/${id}/workspace/tests/Auth.Tests/Auth.Tests.csproj`, testproj(["../../src/Auth.Api/Auth.Api.csproj"], `  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.11" />
+    <PackageReference Include="System.Net.Http.Json" Version="8.0.0" />
   </ItemGroup>
 `));
   add(`tasks/${id}/workspace/tests/Auth.Tests/LoginTests.cs`, `using System.Net.Http.Json;

@@ -62,6 +62,7 @@ POST /api/users/{id}/deactivation deactivates an active user. Admin only. Body: 
 `);
   add(`tasks/${id}/workspace/tests/Acme.Accounts.Tests/Acme.Accounts.Tests.csproj`, testproj(["../../src/Acme.Accounts/Acme.Accounts.csproj"], `  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.11" />
+    <PackageReference Include="System.Net.Http.Json" Version="8.0.0" />
   </ItemGroup>
 `));
   add(`tasks/${id}/workspace/tests/Acme.Accounts.Tests/ExistingTests.cs`, `using System.Net;
@@ -463,6 +464,7 @@ Use SQLite and \`Database.Migrate()\`. Do not switch the app to EnsureCreated. R
   add(`tasks/${id}/gold/src/Phones/Program.cs`, phoneProgram(true));
   add(`tasks/${id}/workspace/tests/Phones.Tests/Phones.Tests.csproj`, testproj(["../../src/Phones/Phones.csproj"], `  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
+    <PackageReference Include="System.Net.Http.Json" Version="8.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0" />
   </ItemGroup>
 `));

@@ -48,7 +48,8 @@ jobs:
           dotnet-version: 8.0.x
       - name: Verify C# tasks
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          fail=0
           for id in \
             BLD-001 BLD-002 BLD-003 BLD-004 BLD-005 \
             BUG-001 BUG-003 BUG-004 BUG-005 \
@@ -59,6 +60,10 @@ jobs:
             SYN-001 SYN-002 SYN-003 SYN-004
           do
             echo "::group::$id"
-            node harness/src/cli.ts verify --task "$id"
+            if ! node harness/src/cli.ts verify --task "$id"; then
+              echo "::error title=Task failed::$id"
+              fail=1
+            fi
             echo "::endgroup::"
           done
+          exit "$fail"
