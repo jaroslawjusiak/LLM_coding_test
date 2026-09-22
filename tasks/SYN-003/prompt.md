@@ -1,6 +1,6 @@
 # Fix the cascading compiler errors
 
-`dotnet build` reports a large cascade of compiler errors. One structural mistake causes them.
+`dotnet build` fails with compiler errors that point at several members. One structural mistake causes them all.
 
 Fix the structural mistake. Do not rewrite the methods and do not "fix" every reported line independently. Run `dotnet test` after the project builds.
 

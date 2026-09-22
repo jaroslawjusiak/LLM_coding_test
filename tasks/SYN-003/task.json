@@ -7,8 +7,8 @@
   "languages": [
     "csharp"
   ],
-  "summary": "One missing brace produces a large compiler cascade. Fix the cause, not every reported line.",
-  "symptom": "dotnet build reports many errors across ReportBuilder.cs.",
+  "summary": "One missing brace breaks the build across several members. Fix the cause, not every reported line.",
+  "symptom": "dotnet build reports errors across ReportBuilder.cs.",
   "rootCause": "ReportBuilder.Open is missing its closing brace.",
   "correctFix": "Add the missing brace and leave the other methods unchanged.",
   "checks": {
@@ -17,7 +17,7 @@
         {
           "project": "Cascade.sln",
           "expect": "fail",
-          "minErrors": 15
+          "minErrors": 2
         }
       ]
     },

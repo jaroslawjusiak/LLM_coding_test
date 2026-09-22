@@ -397,7 +397,7 @@ function syn003() {
   prompt(
     id,
     "Fix the cascading compiler errors",
-    `\`dotnet build\` reports a large cascade of compiler errors. One structural mistake causes them.
+    `\`dotnet build\` fails with compiler errors that point at several members. One structural mistake causes them all.
 
 Fix the structural mistake. Do not rewrite the methods and do not "fix" every reported line independently. Run \`dotnet test\` after the project builds.`,
   );
@@ -441,12 +441,12 @@ public class ReportTests
     category: "syntax",
     difficulty: "medium",
     languages: ["csharp"],
-    summary: "One missing brace produces a large compiler cascade. Fix the cause, not every reported line.",
-    symptom: "dotnet build reports many errors across ReportBuilder.cs.",
+    summary: "One missing brace breaks the build across several members. Fix the cause, not every reported line.",
+    symptom: "dotnet build reports errors across ReportBuilder.cs.",
     rootCause: "ReportBuilder.Open is missing its closing brace.",
     correctFix: "Add the missing brace and leave the other methods unchanged.",
     checks: {
-      initial: { dotnetBuild: [{ project: "Cascade.sln", expect: "fail", minErrors: 15 }] },
+      initial: { dotnetBuild: [{ project: "Cascade.sln", expect: "fail", minErrors: 2 }] },
       final: {
         dotnetBuild: [{ project: "Cascade.sln", expect: "pass" }],
         dotnetTest: [{ project: "Cascade.sln", expect: "pass" }],

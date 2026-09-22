@@ -77,7 +77,7 @@ Dimensions that a task does not declare are left out of the score, so a gold pat
 | --- | --- | --- | --- | --- |
 | SYN-001 | Trivial JSON syntax repair | 1 | C# | Invalid `appsettings.json` fails to load; the repaired file parses and the tests pass. |
 | SYN-002 | Several independent C# syntax errors | 1 | C# | One syntax error in each of six files. The build is red until all six are repaired. |
-| SYN-003 | Cascading compiler errors from one structural mistake | 1 | C# | The build reports at least 15 errors. The gold patch closes the missing brace and does not rewrite the methods. |
+| SYN-003 | Cascading compiler errors from one structural mistake | 1 | C# | One missing brace breaks the build across several members. The gold patch closes that brace and does not rewrite the methods. |
 | SYN-004 | Syntax repair with a semantic restraint trap | 1 | C# | Closing `ToList` is enough. A hidden test locks the integer discount so a speculative rewrite fails. |
 | SYN-005 | React and TSX syntax repair | 1 | React | `tsc` fails on the broken components and passes after the gold repair. |
 | BLD-001 | One build error | 2 | C# | A single type error. The gold patch builds and tests. |
