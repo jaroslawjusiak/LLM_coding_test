@@ -481,6 +481,7 @@ public sealed class ReportBuilder
         {
             seed += 1;
         }
+        return seed;
 ${closed ? "    }\n" : ""}
     public int Line(int index) => 10 + index;
 
