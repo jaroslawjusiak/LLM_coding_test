@@ -65,6 +65,14 @@ jobs:
               echo "$id: PASS" >> "$GITHUB_STEP_SUMMARY"
             else
               echo "::error::$id verify failed"
+              # Surface the harness status lines as annotations (raw logs/artifacts
+              # are not always reachable), truncating long detail for readability.
+              grep -E "^(FAIL|SKIP|ok) (initial|final|gold)" "verify-logs/$id.log" | while IFS= read -r line; do
+                echo "::error::$id: ${line}"
+              done
+              grep -E "error CS[0-9]+|with [0-9]+ errors|score [0-9]+/" "verify-logs/$id.log" | head -6 | while IFS= read -r line; do
+                echo "::error::$id detail: ${line}"
+              done
               echo "$id: FAIL" >> "$GITHUB_STEP_SUMMARY"
               failed="$failed $id"
             fi
