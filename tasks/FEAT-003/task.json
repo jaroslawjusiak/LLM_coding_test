@@ -1,0 +1,52 @@
+{
+  "id": "FEAT-003",
+  "title": "Multiple phone numbers migration",
+  "tier": 4,
+  "category": "data",
+  "difficulty": "hard",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "Split a single phone column into a related collection, with a data migration and API.",
+  "symptom": "A user can store only one phone number.",
+  "rootCause": "Phone is a scalar column and there is no phone collection or migration.",
+  "correctFix": "Add the entity, relationship, backfill migration, and phone endpoints.",
+  "hiddenCopy": [
+    {
+      "from": "PhoneMigrationTests.cs",
+      "to": "tests/Phones.Tests/PhoneMigrationTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Phones.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Phones.sln",
+          "expect": "fail",
+          "includeHidden": true
+        }
+      ]
+    },
+    "final": {
+      "dotnetTest": [
+        {
+          "project": "Phones.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Phones.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "max-files",
+    "maxChangedFiles": 8
+  }
+}

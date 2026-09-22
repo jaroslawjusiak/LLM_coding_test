@@ -1,0 +1,9 @@
+--- a/src/Notify/NotificationDispatcher.cs
++++ b/src/Notify/NotificationDispatcher.cs
+@@
+-    public void Dispatch(Notification note) => _outbox.Enqueue(note);
++    public void Dispatch(Notification note)
++    {
++        _email.Send(note);
++        _outbox.Enqueue(note);
++    }

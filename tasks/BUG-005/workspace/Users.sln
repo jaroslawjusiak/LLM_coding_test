@@ -1,0 +1,29 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acme.Users.Domain", "src/Acme.Users.Domain/Acme.Users.Domain.csproj", "{A0000000-0000-4000-8000-00000000001b}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acme.Users.Application", "src/Acme.Users.Application/Acme.Users.Application.csproj", "{A0000000-0000-4000-8000-00000000001c}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acme.Users.Infrastructure", "src/Acme.Users.Infrastructure/Acme.Users.Infrastructure.csproj", "{A0000000-0000-4000-8000-00000000001d}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acme.Users.Api", "src/Acme.Users.Api/Acme.Users.Api.csproj", "{A0000000-0000-4000-8000-00000000001e}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acme.Users.Tests", "tests/Acme.Users.Tests/Acme.Users.Tests.csproj", "{A0000000-0000-4000-8000-00000000001f}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A0000000-0000-4000-8000-00000000001b}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000001b}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000001c}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000001c}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000001d}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000001d}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000001e}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000001e}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000001f}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000001f}.Debug|Any CPU.Build.0 = Debug|Any CPU
+	EndGlobalSection
+EndGlobal

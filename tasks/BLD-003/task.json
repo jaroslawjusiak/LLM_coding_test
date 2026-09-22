@@ -1,0 +1,46 @@
+{
+  "id": "BLD-003",
+  "title": "Dependency version conflict",
+  "tier": 2,
+  "category": "build",
+  "difficulty": "medium",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "A package version does not exist. The next restore then reports a version conflict.",
+  "symptom": "Restore fails, and a second conflict appears after the missing version is replaced.",
+  "rootCause": "Newtonsoft.Json 99.0.0 does not exist, and 13.0.1 is too low for the ASP.NET Core 8 Newtonsoft integration package.",
+  "correctFix": "Reference Newtonsoft.Json 13.0.3 and leave the call site on JsonConvert.",
+  "checks": {
+    "initial": {
+      "dotnetBuild": [
+        {
+          "project": "Deps.sln",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "dotnetBuild": [
+        {
+          "project": "Deps.sln",
+          "expect": "pass"
+        }
+      ],
+      "dotnetTest": [
+        {
+          "project": "Deps.sln",
+          "expect": "pass"
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "maxUnnecessaryFiles": 0,
+    "rootCausePatterns": [
+      "99\\.0\\.0",
+      "13\\.0\\.3"
+    ]
+  }
+}

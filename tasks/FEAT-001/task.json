@@ -1,0 +1,52 @@
+{
+  "id": "FEAT-001",
+  "title": "Multi-file account deactivation",
+  "tier": 3,
+  "category": "feature",
+  "difficulty": "hard",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "Add an admin deactivation endpoint, validation, audit, tests, and docs without a file list.",
+  "symptom": "The capability does not exist.",
+  "rootCause": "No deactivation workflow is implemented.",
+  "correctFix": "Add the endpoint, status change, audit event, validation, and README note.",
+  "hiddenCopy": [
+    {
+      "from": "DeactivationTests.cs",
+      "to": "tests/Acme.Accounts.Tests/DeactivationTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Deactivate.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Deactivate.sln",
+          "expect": "fail",
+          "includeHidden": true
+        }
+      ]
+    },
+    "final": {
+      "dotnetTest": [
+        {
+          "project": "Deactivate.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Deactivate.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "max-files",
+    "maxChangedFiles": 8
+  }
+}

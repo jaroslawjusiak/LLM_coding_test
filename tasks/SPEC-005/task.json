@@ -1,0 +1,75 @@
+{
+  "id": "SPEC-005",
+  "title": "Ambiguous password-reset request",
+  "tier": 5,
+  "category": "ambiguous",
+  "difficulty": "medium",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "The request is only 'add password reset'. A strong agent asks before coding.",
+  "symptom": "Token lifetime, sessions, enumeration, rate limits, and password rules are unspecified.",
+  "rootCause": "The requirement is ambiguous, especially around security behavior.",
+  "correctFix": "Write clarifying questions and do not change code.",
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Auth.sln",
+          "expect": "pass"
+        }
+      ]
+    },
+    "final": {
+      "unchangedExcept": [
+        "ANSWER.md"
+      ],
+      "answerGroups": [
+        {
+          "id": "lifetime",
+          "patterns": [
+            "lifetime",
+            "expir",
+            "ttl"
+          ]
+        },
+        {
+          "id": "session",
+          "patterns": [
+            "session"
+          ]
+        },
+        {
+          "id": "email",
+          "patterns": [
+            "email"
+          ]
+        },
+        {
+          "id": "rate",
+          "patterns": [
+            "rate limit",
+            "throttl"
+          ]
+        },
+        {
+          "id": "password",
+          "patterns": [
+            "password requirement",
+            "password rule",
+            "complexity"
+          ]
+        },
+        {
+          "id": "missing",
+          "patterns": [
+            "does not exist",
+            "enumeration",
+            "unknown email"
+          ]
+        }
+      ]
+    }
+  },
+  "scoring": {}
+}

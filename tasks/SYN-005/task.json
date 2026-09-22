@@ -1,0 +1,41 @@
+{
+  "id": "SYN-005",
+  "title": "React and TSX syntax repair",
+  "tier": 1,
+  "category": "syntax",
+  "difficulty": "medium",
+  "languages": [
+    "react",
+    "typescript"
+  ],
+  "summary": "Independent TSX syntax errors plus one missing brace. Fix syntax only.",
+  "symptom": "tsc cannot parse the components.",
+  "rootCause": "Syntax errors in UserCard.tsx and a missing brace in UserList.tsx.",
+  "correctFix": "Repair the syntax and leave strings and helper results unchanged.",
+  "checks": {
+    "initial": {
+      "npm": [
+        {
+          "script": "build",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "npm": [
+        {
+          "script": "build",
+          "expect": "pass"
+        },
+        {
+          "script": "test",
+          "expect": "pass"
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "maxUnnecessaryFiles": 0
+  }
+}

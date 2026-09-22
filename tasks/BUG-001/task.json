@@ -1,0 +1,63 @@
+{
+  "id": "BUG-001",
+  "title": "Symptom versus root cause in the user cache",
+  "tier": 2,
+  "category": "debug",
+  "difficulty": "medium",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "The stack trace points at UserService. The cache is seeded with stale users and never invalidates them.",
+  "symptom": "GetUser returns a user with a missing or wrong email. A null check looks sufficient.",
+  "rootCause": "UserCache constructor seeds live entries that shadow the database.",
+  "correctFix": "Do not serve seed entries. Keep caching genuine database reads.",
+  "hiddenCopy": [
+    {
+      "from": "CacheHiddenTests.cs",
+      "to": "tests/CacheBug.Tests/CacheHiddenTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetBuild": [
+        {
+          "project": "CacheBug.sln",
+          "expect": "pass"
+        }
+      ],
+      "dotnetTest": [
+        {
+          "project": "CacheBug.sln",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "dotnetBuild": [
+        {
+          "project": "CacheBug.sln",
+          "expect": "pass"
+        }
+      ],
+      "dotnetTest": [
+        {
+          "project": "CacheBug.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "CacheBug.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "maxUnnecessaryFiles": 0,
+    "rootCausePatterns": [
+      "cache",
+      "seed"
+    ]
+  }
+}

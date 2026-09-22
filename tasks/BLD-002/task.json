@@ -1,0 +1,42 @@
+{
+  "id": "BLD-002",
+  "title": "Three independent build errors",
+  "tier": 2,
+  "category": "build",
+  "difficulty": "medium",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "Missing project reference, wrong namespace, and a missing generated partial.",
+  "symptom": "The solution build reports errors in three projects.",
+  "rootCause": "Api lacks a project reference; EmailSender's namespace does not match its callers; UserMapper.Address.cs is absent.",
+  "correctFix": "Add the project reference, move the namespace, and restore the partial.",
+  "checks": {
+    "initial": {
+      "dotnetBuild": [
+        {
+          "project": "ThreeErrors.sln",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "dotnetBuild": [
+        {
+          "project": "ThreeErrors.sln",
+          "expect": "pass"
+        }
+      ],
+      "dotnetTest": [
+        {
+          "project": "ThreeErrors.sln",
+          "expect": "pass"
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "maxUnnecessaryFiles": 0
+  }
+}

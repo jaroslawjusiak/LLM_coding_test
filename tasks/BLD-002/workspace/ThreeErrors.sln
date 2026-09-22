@@ -1,0 +1,25 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acme.Domain", "src/Acme.Domain/Acme.Domain.csproj", "{A0000000-0000-4000-8000-00000000000a}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acme.Application", "src/Acme.Application/Acme.Application.csproj", "{A0000000-0000-4000-8000-00000000000b}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acme.Api", "src/Acme.Api/Acme.Api.csproj", "{A0000000-0000-4000-8000-00000000000c}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acme.Tests", "tests/Acme.Tests/Acme.Tests.csproj", "{A0000000-0000-4000-8000-00000000000d}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A0000000-0000-4000-8000-00000000000a}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000000a}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000000b}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000000b}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000000c}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000000c}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000000d}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000000d}.Debug|Any CPU.Build.0 = Debug|Any CPU
+	EndGlobalSection
+EndGlobal

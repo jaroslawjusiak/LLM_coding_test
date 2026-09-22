@@ -1,0 +1,72 @@
+{
+  "id": "SPEC-001",
+  "title": "Notification spec versus implementation",
+  "tier": 3,
+  "category": "analysis",
+  "difficulty": "medium",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "The notification service looks complete. Compare it with IMPLEMENTATION_PLAN.md and do not edit code.",
+  "symptom": "Several requirements are missing, partial, or wrong while the happy-path test stays green.",
+  "rootCause": "The implementation covers email subscribe/send only.",
+  "correctFix": "Report the gaps. Do not modify the code in this variant.",
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Notifications.sln",
+          "expect": "pass"
+        }
+      ]
+    },
+    "final": {
+      "unchangedExcept": [
+        "ANSWER.md"
+      ],
+      "answerFile": "ANSWER.md",
+      "answerGroups": [
+        {
+          "id": "sms",
+          "patterns": [
+            "sms[\\s\\S]{0,80}missing"
+          ]
+        },
+        {
+          "id": "retry",
+          "patterns": [
+            "retry[\\s\\S]{0,80}(once|incorrect|not three)"
+          ]
+        },
+        {
+          "id": "duplicate",
+          "patterns": [
+            "duplicate[\\s\\S]{0,80}missing"
+          ]
+        },
+        {
+          "id": "attempts",
+          "patterns": [
+            "(attempt|recorded)[\\s\\S]{0,80}(partial|success)"
+          ]
+        },
+        {
+          "id": "unsubscribe",
+          "patterns": [
+            "unsubscribe[\\s\\S]{0,40}missing"
+          ]
+        },
+        {
+          "id": "async",
+          "patterns": [
+            "synchronous"
+          ]
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "maxUnnecessaryFiles": 0
+  }
+}

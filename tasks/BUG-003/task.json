@@ -1,0 +1,61 @@
+{
+  "id": "BUG-003",
+  "title": "Docker environment mismatch",
+  "tier": 2,
+  "category": "configuration",
+  "difficulty": "hard",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "The app works locally and fails in the provided Compose environment because the connection-string key does not match.",
+  "symptom": "Docker config still resolves Host=localhost.",
+  "rootCause": "Compose sets ConnectionStrings__Database while the app reads ConnectionStrings:Orders.",
+  "correctFix": "Rename the Compose environment variable. Do not change AppConfig.cs or local appsettings.",
+  "hiddenCopy": [
+    {
+      "from": "DockerCodeGuardTests.cs",
+      "to": "tests/Acme.Orders.Tests/DockerCodeGuardTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetBuild": [
+        {
+          "project": "DockerTrap.sln",
+          "expect": "pass"
+        }
+      ],
+      "dotnetTest": [
+        {
+          "project": "DockerTrap.sln",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "dotnetTest": [
+        {
+          "project": "DockerTrap.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "DockerTrap.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "allowedFiles": [
+      "docker-compose.yml",
+      "src/Acme.Orders/appsettings.Docker.json"
+    ],
+    "maxUnnecessaryFiles": 0,
+    "rootCausePatterns": [
+      "ConnectionStrings",
+      "Orders"
+    ]
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "id": "SYN-004",
+  "title": "Syntax repair with a semantic restraint trap",
+  "tier": 1,
+  "category": "syntax",
+  "difficulty": "medium",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "Fix the compile error. Do not rewrite the discount behavior that already compiles.",
+  "symptom": "Names() does not compile because ToList( is unclosed.",
+  "rootCause": "A missing parenthesis, plus an unrelated integer-division discount that is intentional current behavior.",
+  "correctFix": "Close the ToList call. Do not change PreferredDiscount or the tests.",
+  "hiddenCopy": [
+    {
+      "from": "RestraintHiddenTests.cs",
+      "to": "tests/Restraint.Tests/RestraintHiddenTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetBuild": [
+        {
+          "project": "Restraint.sln",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "dotnetBuild": [
+        {
+          "project": "Restraint.sln",
+          "expect": "pass"
+        }
+      ],
+      "dotnetTest": [
+        {
+          "project": "Restraint.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Restraint.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "allowedFiles": [
+      "src/Restraint/UserDirectory.cs"
+    ],
+    "maxUnnecessaryFiles": 0
+  }
+}

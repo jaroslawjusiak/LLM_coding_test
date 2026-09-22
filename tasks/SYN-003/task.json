@@ -1,0 +1,48 @@
+{
+  "id": "SYN-003",
+  "title": "Cascading compiler errors from one structural mistake",
+  "tier": 1,
+  "category": "syntax",
+  "difficulty": "medium",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "One missing brace produces a large compiler cascade. Fix the cause, not every reported line.",
+  "symptom": "dotnet build reports many errors across ReportBuilder.cs.",
+  "rootCause": "ReportBuilder.Open is missing its closing brace.",
+  "correctFix": "Add the missing brace and leave the other methods unchanged.",
+  "checks": {
+    "initial": {
+      "dotnetBuild": [
+        {
+          "project": "Cascade.sln",
+          "expect": "fail",
+          "minErrors": 15
+        }
+      ]
+    },
+    "final": {
+      "dotnetBuild": [
+        {
+          "project": "Cascade.sln",
+          "expect": "pass"
+        }
+      ],
+      "dotnetTest": [
+        {
+          "project": "Cascade.sln",
+          "expect": "pass"
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "max-files",
+    "maxChangedFiles": 2,
+    "maxUnnecessaryFiles": 0,
+    "rootCausePatterns": [
+      "brace",
+      "Open"
+    ]
+  }
+}

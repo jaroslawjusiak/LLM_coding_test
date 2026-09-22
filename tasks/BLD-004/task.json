@@ -1,0 +1,46 @@
+{
+  "id": "BLD-004",
+  "title": "Dependency upgrade with breaking API changes",
+  "tier": 4,
+  "category": "build",
+  "difficulty": "hard",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "A package version does not exist and the local WidgetKit v2 API no longer matches the call sites.",
+  "symptom": "Restore fails, then the v1 WidgetKit calls fail to compile.",
+  "rootCause": "Newtonsoft.Json 99.0.0 plus application code that was not moved to the documented v2 API.",
+  "correctFix": "Reference Newtonsoft.Json 13.0.3 and adapt call sites using docs/widgetkit-v2.md. Do not edit libs/WidgetKit.",
+  "checks": {
+    "initial": {
+      "dotnetBuild": [
+        {
+          "project": "Upgrade.sln",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "dotnetBuild": [
+        {
+          "project": "Upgrade.sln",
+          "expect": "pass"
+        }
+      ],
+      "dotnetTest": [
+        {
+          "project": "Upgrade.sln",
+          "expect": "pass"
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "maxUnnecessaryFiles": 0,
+    "rootCausePatterns": [
+      "WidgetFactory",
+      "99\\.0\\.0"
+    ]
+  }
+}

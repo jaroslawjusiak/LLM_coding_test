@@ -1,0 +1,17 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acme.Accounts", "src/Acme.Accounts/Acme.Accounts.csproj", "{A0000000-0000-4000-8000-00000000002a}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acme.Accounts.Tests", "tests/Acme.Accounts.Tests/Acme.Accounts.Tests.csproj", "{A0000000-0000-4000-8000-00000000002b}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A0000000-0000-4000-8000-00000000002a}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000002a}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000002b}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-00000000002b}.Debug|Any CPU.Build.0 = Debug|Any CPU
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,69 @@
+{
+  "id": "REF-001",
+  "title": "Refactor nested order processing",
+  "tier": 3,
+  "category": "refactor",
+  "difficulty": "easy",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "Reduce nesting in ProcessOrder without changing behavior.",
+  "symptom": "ProcessOrder is a deeply nested conditional.",
+  "rootCause": "The behavior is embedded in nested null and status checks.",
+  "correctFix": "Extract guard clauses or small methods and keep the same results.",
+  "hiddenCopy": [
+    {
+      "from": "OrderHiddenTests.cs",
+      "to": "tests/Orders.Tests/OrderHiddenTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Orders.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Orders.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ],
+      "nesting": [
+        {
+          "file": "src/Orders/OrderProcessor.cs",
+          "compare": "gte",
+          "depth": 5
+        }
+      ]
+    },
+    "final": {
+      "dotnetTest": [
+        {
+          "project": "Orders.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Orders.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ],
+      "nesting": [
+        {
+          "file": "src/Orders/OrderProcessor.cs",
+          "compare": "lte",
+          "depth": 3
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "rootCausePatterns": [
+      "nest",
+      "guard",
+      "extract"
+    ]
+  }
+}
