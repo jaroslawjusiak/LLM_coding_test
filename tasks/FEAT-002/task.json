@@ -1,0 +1,41 @@
+{
+  "id": "FEAT-002",
+  "title": "Conform the orders client to the API contract",
+  "tier": 2,
+  "category": "integration",
+  "difficulty": "medium",
+  "languages": [
+    "react",
+    "typescript"
+  ],
+  "summary": "The OpenAPI document and the client disagree on the header and the body.",
+  "symptom": "The client test fails against the documented contract.",
+  "rootCause": "The client still uses an older header and payload shape.",
+  "correctFix": "Send Authorization: Bearer and { customerId, items }.",
+  "checks": {
+    "initial": {
+      "npm": [
+        {
+          "script": "test",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "npm": [
+        {
+          "script": "build",
+          "expect": "pass"
+        },
+        {
+          "script": "test",
+          "expect": "pass"
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "maxUnnecessaryFiles": 0
+  }
+}

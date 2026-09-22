@@ -1,0 +1,64 @@
+{
+  "id": "REF-002",
+  "title": "Refactor the React checkout component",
+  "tier": 3,
+  "category": "refactor",
+  "difficulty": "medium",
+  "languages": [
+    "react",
+    "typescript"
+  ],
+  "summary": "Flatten Checkout pricing without changing totals.",
+  "symptom": "Pricing rules are nested inside several conditions.",
+  "rootCause": "The component function mixes guards and arithmetic.",
+  "correctFix": "Extract helpers or guard clauses and keep quote results identical.",
+  "hiddenCopy": [
+    {
+      "from": "checkout.hidden.test.ts",
+      "to": "tests/checkout.hidden.test.ts"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "npm": [
+        {
+          "script": "test",
+          "expect": "pass"
+        },
+        {
+          "script": "test",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ],
+      "nesting": [
+        {
+          "file": "src/Checkout.tsx",
+          "compare": "gte",
+          "depth": 3
+        }
+      ]
+    },
+    "final": {
+      "npm": [
+        {
+          "script": "test",
+          "expect": "pass"
+        },
+        {
+          "script": "test",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ],
+      "nesting": [
+        {
+          "file": "src/Checkout.tsx",
+          "compare": "lte",
+          "depth": 1
+        }
+      ]
+    }
+  },
+  "scoring": {}
+}

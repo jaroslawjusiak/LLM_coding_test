@@ -1,0 +1,47 @@
+{
+  "id": "SPEC-002",
+  "title": "Test-driven payment service",
+  "tier": 1,
+  "category": "implementation",
+  "difficulty": "medium",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "Visible tests describe the happy path and retries. Hidden tests cover null, duplicates, zero, and large amounts.",
+  "symptom": "ChargeAsync throws NotImplementedException.",
+  "rootCause": "The service has not been implemented.",
+  "correctFix": "Implement the gateway loop, cancellation skip, and idempotent ledger.",
+  "hiddenCopy": [
+    {
+      "from": "PaymentHiddenTests.cs",
+      "to": "tests/Payments.Tests/PaymentHiddenTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Payments.sln",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "dotnetTest": [
+        {
+          "project": "Payments.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Payments.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "max-files",
+    "maxChangedFiles": 3
+  }
+}

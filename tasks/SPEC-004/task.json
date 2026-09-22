@@ -1,0 +1,52 @@
+{
+  "id": "SPEC-004",
+  "title": "Conflicting test versus README",
+  "tier": 3,
+  "category": "implementation",
+  "difficulty": "medium",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "The README says empty carts return 200. A test and the controller still say 400.",
+  "symptom": "The visible test and the requirement disagree.",
+  "rootCause": "The test was not updated when the requirement changed.",
+  "correctFix": "Return 200 with an empty array and update the outdated test.",
+  "hiddenCopy": [
+    {
+      "from": "EmptyCartHiddenTests.cs",
+      "to": "tests/Cart.Tests/EmptyCartHiddenTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Cart.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Cart.sln",
+          "expect": "fail",
+          "includeHidden": true
+        }
+      ]
+    },
+    "final": {
+      "dotnetTest": [
+        {
+          "project": "Cart.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Cart.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "max-files",
+    "maxChangedFiles": 3
+  }
+}

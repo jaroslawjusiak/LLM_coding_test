@@ -1,0 +1,3 @@
+2024-04-02T10:11:02Z ERR NullReferenceException in UserService.cs line 40
+2024-04-02T10:11:02Z INF recovered user 18 from replica
+This log is from the April incident. It was fixed before the duplicate-email reports started.

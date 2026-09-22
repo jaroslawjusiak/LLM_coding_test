@@ -1,0 +1,98 @@
+name: Verify benchmark
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  harness:
+    name: Scorer tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Parser tests
+        working-directory: harness
+        run: npm test
+
+  react:
+    name: React tasks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify React and TypeScript tasks
+        run: |
+          set -euo pipefail
+          for id in BUG-002 FEAT-002 PERF-002 REF-002 SYN-005; do
+            echo "::group::$id"
+            node harness/src/cli.ts verify --task "$id"
+            echo "::endgroup::"
+          done
+
+  csharp:
+    name: C# tasks
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Verify C# tasks
+        run: |
+          set -uo pipefail
+          mkdir -p verify-logs
+          failed=""
+          for id in \
+            BLD-001 BLD-002 BLD-003 BLD-004 BLD-005 \
+            BUG-001 BUG-003 BUG-004 BUG-005 \
+            FEAT-001 FEAT-003 FEAT-004 \
+            PERF-001 REF-001 REF-003 \
+            SEC-001 SEC-002 \
+            SPEC-001 SPEC-002 SPEC-003 SPEC-004 SPEC-005 \
+            SYN-001 SYN-002 SYN-003 SYN-004
+          do
+            echo "::group::$id"
+            if node harness/src/cli.ts verify --task "$id" 2>&1 | tee "verify-logs/$id.log"; then
+              echo "$id: PASS" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::$id verify failed"
+              # Surface the harness status lines as annotations (raw logs/artifacts
+              # are not always reachable), truncating long detail for readability.
+              grep -E "^(FAIL|SKIP|ok) (initial|final|gold)" "verify-logs/$id.log" | while IFS= read -r line; do
+                echo "::error::$id: ${line}"
+              done
+              grep -E "error CS[0-9]+|with [0-9]+ errors|score [0-9]+/" "verify-logs/$id.log" | head -6 | while IFS= read -r line; do
+                echo "::error::$id detail: ${line}"
+              done
+              echo "$id: FAIL" >> "$GITHUB_STEP_SUMMARY"
+              failed="$failed $id"
+            fi
+            echo "::endgroup::"
+          done
+          if [ -n "$failed" ]; then
+            echo "Failed tasks:$failed"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Failed tasks:$failed" >> "$GITHUB_STEP_SUMMARY"
+            echo "::group::Failed task logs"
+            for id in $failed; do
+              echo "===== $id ====="
+              cat "verify-logs/$id.log"
+            done
+            echo "::endgroup::"
+            exit 1
+          fi
+      - name: Upload verify logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: csharp-verify-logs
+          path: verify-logs/

@@ -1,0 +1,42 @@
+{
+  "id": "BLD-001",
+  "title": "One build error",
+  "tier": 2,
+  "category": "build",
+  "difficulty": "easy",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "A single mistyped type name prevents the build.",
+  "symptom": "CS0246 for Custmer.",
+  "rootCause": "The repository names a type that was never declared.",
+  "correctFix": "Use Customer.",
+  "checks": {
+    "initial": {
+      "dotnetBuild": [
+        {
+          "project": "OneError.sln",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "dotnetBuild": [
+        {
+          "project": "OneError.sln",
+          "expect": "pass"
+        }
+      ],
+      "dotnetTest": [
+        {
+          "project": "OneError.sln",
+          "expect": "pass"
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "maxUnnecessaryFiles": 0
+  }
+}

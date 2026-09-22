@@ -1,0 +1,100 @@
+{
+  "id": "FEAT-004",
+  "title": "Customer.Id int to Guid",
+  "tier": 5,
+  "category": "feature",
+  "difficulty": "hard",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "Identify the blast radius, then change Customer.Id from int to Guid across the repository.",
+  "symptom": "Identifiers are integers end to end.",
+  "rootCause": "The id type is part of the schema, API, cache, webhook, logs, tests, and a small script.",
+  "correctFix": "Write IMPACT.md, then migrate the id and update every dependent contract.",
+  "hiddenCopy": [
+    {
+      "from": "CustomerGuidTests.cs",
+      "to": "tests/Customers.Tests/CustomerGuidTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Customers.sln",
+          "expect": "pass"
+        }
+      ]
+    },
+    "final": {
+      "dotnetTest": [
+        {
+          "project": "Customers.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ],
+      "answerFile": "IMPACT.md",
+      "answerGroups": [
+        {
+          "id": "db",
+          "patterns": [
+            "migration",
+            "database",
+            "schema"
+          ]
+        },
+        {
+          "id": "dto",
+          "patterns": [
+            "DTO",
+            "dto"
+          ]
+        },
+        {
+          "id": "route",
+          "patterns": [
+            "route",
+            "controller"
+          ]
+        },
+        {
+          "id": "json",
+          "patterns": [
+            "JSON",
+            "serialization"
+          ]
+        },
+        {
+          "id": "tests",
+          "patterns": [
+            "test"
+          ]
+        },
+        {
+          "id": "cache",
+          "patterns": [
+            "cache"
+          ]
+        },
+        {
+          "id": "webhook",
+          "patterns": [
+            "webhook"
+          ]
+        },
+        {
+          "id": "front",
+          "patterns": [
+            "customer.js",
+            "frontend"
+          ]
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "max-files",
+    "maxChangedFiles": 12
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "id": "SPEC-003",
+  "title": "Find the account-deletion authorization chain",
+  "tier": 3,
+  "category": "exploration",
+  "difficulty": "hard",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "Explain the real authorization call chain. Do not modify the repository.",
+  "symptom": "Several types look like they authorize deletion.",
+  "rootCause": "The decision is AccountDeletionAuthorizationHandler, reached through AccountDeletionService from AccountsController.",
+  "correctFix": "Explain the chain and distinguish the cleanup job and legacy types. Do not edit code.",
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Helpdesk.sln",
+          "expect": "pass"
+        }
+      ]
+    },
+    "final": {
+      "unchangedExcept": [
+        "ANSWER.md"
+      ],
+      "answerGroups": [
+        {
+          "id": "controller",
+          "patterns": [
+            "AccountsController"
+          ]
+        },
+        {
+          "id": "service",
+          "patterns": [
+            "AccountDeletionService"
+          ]
+        },
+        {
+          "id": "handler",
+          "patterns": [
+            "AccountDeletionAuthorizationHandler"
+          ]
+        },
+        {
+          "id": "dispute",
+          "patterns": [
+            "billing dispute",
+            "BillingDispute",
+            "open dispute"
+          ]
+        },
+        {
+          "id": "cleanup",
+          "patterns": [
+            "InactiveAccountCleanupJob[\\s\\S]{0,120}(not the|system|background)"
+          ]
+        }
+      ]
+    }
+  },
+  "scoring": {}
+}

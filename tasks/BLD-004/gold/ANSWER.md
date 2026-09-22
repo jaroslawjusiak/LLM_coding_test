@@ -1,0 +1,1 @@
+The app still called Widget.Create and Run from the v1 namespace, and it referenced Newtonsoft.Json 99.0.0. Call sites now use WidgetFactory and ExecuteAsync in WidgetKit.Core. The library project was not modified.

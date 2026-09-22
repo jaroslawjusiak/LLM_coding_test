@@ -1,0 +1,17 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Match", "src/Match/Match.csproj", "{A0000000-0000-4000-8000-000000000038}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Match.Tests", "tests/Match.Tests/Match.Tests.csproj", "{A0000000-0000-4000-8000-000000000039}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A0000000-0000-4000-8000-000000000038}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-000000000038}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0000000-0000-4000-8000-000000000039}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0000000-0000-4000-8000-000000000039}.Debug|Any CPU.Build.0 = Debug|Any CPU
+	EndGlobalSection
+EndGlobal

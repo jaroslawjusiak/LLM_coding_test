@@ -1,0 +1,56 @@
+{
+  "id": "BLD-005",
+  "title": "Misleading cascading project errors",
+  "tier": 2,
+  "category": "build",
+  "difficulty": "hard",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "Dozens of missing-type errors come from one csproj exclusion.",
+  "symptom": "Many CS0246 errors across Worker files.",
+  "rootCause": "Compile Remove excludes GlobalUsings.cs.",
+  "correctFix": "Remove the Compile Remove item. Do not add usings to every file.",
+  "checks": {
+    "initial": {
+      "dotnetBuild": [
+        {
+          "project": "CascadeBuild.sln",
+          "expect": "fail",
+          "minErrors": 15
+        }
+      ]
+    },
+    "final": {
+      "dotnetBuild": [
+        {
+          "project": "CascadeBuild.sln",
+          "expect": "pass"
+        }
+      ],
+      "dotnetTest": [
+        {
+          "project": "CascadeBuild.sln",
+          "expect": "pass"
+        }
+      ],
+      "answerFile": "ANSWER.md",
+      "answerGroups": [
+        {
+          "id": "cause",
+          "patterns": [
+            "Compile Remove",
+            "GlobalUsings"
+          ]
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "maxUnnecessaryFiles": 0,
+    "rootCausePatterns": [
+      "GlobalUsings"
+    ]
+  }
+}

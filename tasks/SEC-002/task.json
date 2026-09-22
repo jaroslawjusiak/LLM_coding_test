@@ -1,0 +1,69 @@
+{
+  "id": "SEC-002",
+  "title": "Fix the security issues",
+  "tier": 4,
+  "category": "security",
+  "difficulty": "hard",
+  "languages": [
+    "csharp",
+    "react"
+  ],
+  "summary": "Fix injection, traversal, authorization, logging, and XSS, and cover them with tests.",
+  "symptom": "The happy path works while the unsafe patterns remain.",
+  "rootCause": "The same five vulnerabilities as the audit task.",
+  "correctFix": "Parameterize, confine paths, check the Admin role, redact passwords, and escape HTML.",
+  "hiddenCopy": [
+    {
+      "from": "SecurityHiddenTests.cs",
+      "to": "tests/Support.Tests/SecurityHiddenTests.cs"
+    },
+    {
+      "from": "comment.hidden.test.ts",
+      "to": "tests/comment.hidden.test.ts"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Support.sln",
+          "expect": "pass"
+        }
+      ],
+      "npm": [
+        {
+          "script": "test",
+          "expect": "pass"
+        }
+      ]
+    },
+    "final": {
+      "dotnetTest": [
+        {
+          "project": "Support.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Support.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ],
+      "npm": [
+        {
+          "script": "test",
+          "expect": "pass"
+        },
+        {
+          "script": "test",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "max-files",
+    "maxChangedFiles": 8
+  }
+}
