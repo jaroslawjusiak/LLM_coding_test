@@ -1,0 +1,63 @@
+{
+  "id": "REF-003",
+  "title": "Refactor the billing god class",
+  "tier": 3,
+  "category": "refactor",
+  "difficulty": "hard",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "Split BillingProcessor without changing invoice totals.",
+  "symptom": "Pricing, tax, and validation live in one long method.",
+  "rootCause": "The class accumulated every billing rule.",
+  "correctFix": "Move rules to focused types and keep Total results identical.",
+  "hiddenCopy": [
+    {
+      "from": "BillingHiddenTests.cs",
+      "to": "tests/Billing.Tests/BillingHiddenTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Billing.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Billing.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ],
+      "lineCount": [
+        {
+          "file": "src/Billing/BillingProcessor.cs",
+          "compare": "gte",
+          "lines": 180
+        }
+      ]
+    },
+    "final": {
+      "dotnetTest": [
+        {
+          "project": "Billing.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Billing.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ],
+      "lineCount": [
+        {
+          "file": "src/Billing/BillingProcessor.cs",
+          "compare": "lte",
+          "lines": 80
+        }
+      ]
+    }
+  },
+  "scoring": {}
+}

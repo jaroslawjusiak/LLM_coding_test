@@ -1,0 +1,1 @@
+Each type had its own syntax error: missing semicolon, missing parenthesis, missing brace, a generic written with square brackets, an attribute missing its closing bracket, and an unterminated string. Behavior was not changed.

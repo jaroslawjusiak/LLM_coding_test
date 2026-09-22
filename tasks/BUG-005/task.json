@@ -1,0 +1,55 @@
+{
+  "id": "BUG-005",
+  "title": "Surgical fix for unknown-user HTTP 500",
+  "tier": 2,
+  "category": "debug",
+  "difficulty": "medium",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "Unknown users crash the controller. Change only the behavior of that case.",
+  "symptom": "GET /users/{id} returns 500 for an unknown id.",
+  "rootCause": "UsersController maps user.Id without a null check.",
+  "correctFix": "Return NotFound when the reader returns null.",
+  "hiddenCopy": [
+    {
+      "from": "UnknownUserTests.cs",
+      "to": "tests/Acme.Users.Tests/UnknownUserTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Users.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Users.sln",
+          "expect": "fail",
+          "includeHidden": true
+        }
+      ]
+    },
+    "final": {
+      "dotnetTest": [
+        {
+          "project": "Users.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Users.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "allowedFiles": [
+      "src/Acme.Users.Api/Controllers/UsersController.cs"
+    ],
+    "maxUnnecessaryFiles": 0
+  }
+}

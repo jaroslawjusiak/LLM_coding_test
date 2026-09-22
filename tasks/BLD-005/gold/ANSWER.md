@@ -1,0 +1,1 @@
+GlobalUsings.cs was excluded with Compile Remove, so every file lost System, collections, IO, LINQ, and tasks. Removing that exclusion fixes the cascade. Per-file usings would hide the project defect.

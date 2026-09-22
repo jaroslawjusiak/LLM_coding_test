@@ -1,0 +1,20 @@
+namespace CascadeBuild;
+
+public sealed class Worker5
+{
+    public int Total(List<int> values)
+    {
+        var rows = new List<string>();
+        foreach (var value in values.Where(v => v > 0))
+        {
+            rows.Add(value.ToString());
+        }
+        return values.Sum();
+    }
+
+    public Task<string> ReadLabelAsync()
+    {
+        var path = Path.Combine("labels", "w5.txt");
+        return Task.FromResult(path);
+    }
+}

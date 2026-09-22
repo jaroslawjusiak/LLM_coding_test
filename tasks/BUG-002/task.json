@@ -1,0 +1,45 @@
+{
+  "id": "BUG-002",
+  "title": "React role check and delivery-time bugs",
+  "tier": 2,
+  "category": "debug",
+  "difficulty": "medium",
+  "languages": [
+    "react",
+    "typescript"
+  ],
+  "summary": "A truthy string makes every user an admin, and delivery labels are shifted by an hour.",
+  "symptom": "Tests fail for non-admin access and for an 08:30 UTC label.",
+  "rootCause": "|| \"SuperAdmin\" is always truthy. formatDelivery adds 60 minutes instead of using UTC accessors.",
+  "correctFix": "Compare both roles, and format with getUTCHours/getUTCMinutes.",
+  "checks": {
+    "initial": {
+      "npm": [
+        {
+          "script": "build",
+          "expect": "pass"
+        },
+        {
+          "script": "test",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "npm": [
+        {
+          "script": "build",
+          "expect": "pass"
+        },
+        {
+          "script": "test",
+          "expect": "pass"
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "maxUnnecessaryFiles": 0
+  }
+}

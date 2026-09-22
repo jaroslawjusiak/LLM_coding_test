@@ -1,0 +1,1 @@
+Commit C made NotificationDispatcher send and enqueue. The outbox processor then sent the same message. The April NullReferenceException in the sample log is unrelated. Dispatch now only enqueues, and the processor remains the only sender. Added a duplicate-email regression test.

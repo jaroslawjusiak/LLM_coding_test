@@ -1,0 +1,15 @@
+{
+  "name": "llm-coding-test",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Local scorer for the C# and React LLM coding benchmark. No Python.",
+  "scripts": {
+    "list": "node src/cli.ts list",
+    "verify": "node src/cli.ts verify",
+    "test": "node --test test/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "id": "BUG-004",
+  "title": "Regression: duplicate emails",
+  "tier": 4,
+  "category": "debug",
+  "difficulty": "hard",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "A later commit sends directly and through the outbox. Existing tests stay green. A sample log points at the wrong service.",
+  "symptom": "Users occasionally receive two copies of one notification.",
+  "rootCause": "Dispatch both sends and enqueues, so the processor sends a second copy.",
+  "correctFix": "Enqueue only. Add a regression test that flushes twice and expects one send.",
+  "hiddenCopy": [
+    {
+      "from": "OutboxHiddenTests.cs",
+      "to": "tests/Notify.Tests/OutboxHiddenTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetBuild": [
+        {
+          "project": "Notify.sln",
+          "expect": "pass"
+        }
+      ],
+      "dotnetTest": [
+        {
+          "project": "Notify.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Notify.sln",
+          "expect": "fail",
+          "includeHidden": true
+        }
+      ]
+    },
+    "final": {
+      "dotnetTest": [
+        {
+          "project": "Notify.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Notify.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ],
+      "requireFile": [
+        "tests/Notify.Tests/DuplicateEmailRegressionTests.cs"
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "max-files",
+    "maxChangedFiles": 4,
+    "requireRegressionTest": true,
+    "rootCausePatterns": [
+      "enqueue",
+      "outbox"
+    ]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "id": "SYN-002",
+  "title": "Several independent C# syntax errors",
+  "tier": 1,
+  "category": "syntax",
+  "difficulty": "easy",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "One file contains six independent syntax errors. Repair them without changing behavior.",
+  "symptom": "The project does not compile.",
+  "rootCause": "Six separate syntax errors, one per type.",
+  "correctFix": "Repair each error in place.",
+  "checks": {
+    "initial": {
+      "dotnetBuild": [
+        {
+          "project": "SyntaxRepair.sln",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "dotnetBuild": [
+        {
+          "project": "SyntaxRepair.sln",
+          "expect": "pass"
+        }
+      ],
+      "dotnetTest": [
+        {
+          "project": "SyntaxRepair.sln",
+          "expect": "pass"
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "allowedFiles": [
+      "src/SyntaxRepair/SyntaxSamples.cs"
+    ],
+    "maxUnnecessaryFiles": 0
+  }
+}

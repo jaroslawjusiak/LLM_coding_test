@@ -1,0 +1,68 @@
+{
+  "id": "SEC-001",
+  "title": "Security audit, do not modify",
+  "tier": 4,
+  "category": "analysis",
+  "difficulty": "medium",
+  "languages": [
+    "csharp",
+    "react"
+  ],
+  "summary": "The app works. Find the injection, traversal, authorization, logging, and XSS issues.",
+  "symptom": "No failing test. The defects are unsafe patterns.",
+  "rootCause": "Query interpolation, unsanitized paths, role-blind auth, password logging, and raw HTML rendering.",
+  "correctFix": "Describe each issue, the risk, and a fix. Do not edit code.",
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Support.sln",
+          "expect": "pass"
+        }
+      ]
+    },
+    "final": {
+      "unchangedExcept": [
+        "ANSWER.md"
+      ],
+      "answerGroups": [
+        {
+          "id": "sql",
+          "patterns": [
+            "sql injection",
+            "interpolat"
+          ]
+        },
+        {
+          "id": "path",
+          "patterns": [
+            "path traversal",
+            "\\.\\./"
+          ]
+        },
+        {
+          "id": "auth",
+          "patterns": [
+            "admin",
+            "authori"
+          ]
+        },
+        {
+          "id": "log",
+          "patterns": [
+            "password"
+          ]
+        },
+        {
+          "id": "xss",
+          "patterns": [
+            "dangerouslySetInnerHTML",
+            "cross-site",
+            "xss"
+          ]
+        }
+      ]
+    }
+  },
+  "scoring": {}
+}

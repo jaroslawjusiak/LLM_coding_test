@@ -1,0 +1,1 @@
+UserService was only the symptom. UserCache seeded stale users, including a null email for id 42 and a wrong email for id 7, and never expired them. Seeds are no longer returned as hits. Database reads are still cached.

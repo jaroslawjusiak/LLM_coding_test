@@ -1,0 +1,56 @@
+{
+  "id": "PERF-001",
+  "title": "Algorithmic order matching",
+  "tier": 4,
+  "category": "performance",
+  "difficulty": "medium",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "Replace the nested user/order scan with a lookup.",
+  "symptom": "Matching is correct and quadratic.",
+  "rootCause": "Each user scans the full order list.",
+  "correctFix": "Group orders by user id before aggregating.",
+  "hiddenCopy": [
+    {
+      "from": "MatchHiddenTests.cs",
+      "to": "tests/Match.Tests/MatchHiddenTests.cs"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "dotnetTest": [
+        {
+          "project": "Match.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Match.sln",
+          "expect": "fail",
+          "includeHidden": true
+        }
+      ]
+    },
+    "final": {
+      "dotnetTest": [
+        {
+          "project": "Match.sln",
+          "expect": "pass"
+        },
+        {
+          "project": "Match.sln",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "rootCausePatterns": [
+      "lookup",
+      "group",
+      "dictionary",
+      "index"
+    ]
+  }
+}

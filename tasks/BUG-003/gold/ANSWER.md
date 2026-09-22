@@ -1,0 +1,1 @@
+Local appsettings already uses ConnectionStrings:Orders. Compose published ConnectionStrings__Database, so the container never overrode the localhost value. Renamed the environment variable. Application code was not changed.

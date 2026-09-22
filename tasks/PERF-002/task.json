@@ -1,0 +1,57 @@
+{
+  "id": "PERF-002",
+  "title": "N+1 fetches and repeated filters",
+  "tier": 4,
+  "category": "performance",
+  "difficulty": "hard",
+  "languages": [
+    "react",
+    "typescript"
+  ],
+  "summary": "Replace a nested filter and a per-user fetch with one index and the bulk endpoint.",
+  "symptom": "Results are correct. Work grows with users times orders, and with one HTTP call per user.",
+  "rootCause": "groupActive filters the full list per user. loadOrders ignores the bulk endpoint.",
+  "correctFix": "Build a map once and request /api/orders?userIds=.",
+  "hiddenCopy": [
+    {
+      "from": "orders.hidden.test.ts",
+      "to": "tests/orders.hidden.test.ts"
+    }
+  ],
+  "checks": {
+    "initial": {
+      "npm": [
+        {
+          "script": "test",
+          "expect": "pass"
+        },
+        {
+          "script": "test",
+          "expect": "fail",
+          "includeHidden": true
+        }
+      ]
+    },
+    "final": {
+      "npm": [
+        {
+          "script": "test",
+          "expect": "pass"
+        },
+        {
+          "script": "test",
+          "expect": "pass",
+          "includeHidden": true
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "rootCausePatterns": [
+      "userIds",
+      "map",
+      "index",
+      "bulk"
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "id": "SYN-001",
+  "title": "Trivial JSON syntax repair",
+  "tier": 1,
+  "category": "syntax",
+  "difficulty": "easy",
+  "languages": [
+    "csharp"
+  ],
+  "summary": "One missing brace in appsettings.json. Do not change the document's meaning.",
+  "symptom": "JSON parser rejects appsettings.json.",
+  "rootCause": "The root object is missing a closing brace.",
+  "correctFix": "Insert the missing brace and leave every key and value unchanged.",
+  "checks": {
+    "initial": {
+      "json": {
+        "files": [
+          "appsettings.json"
+        ],
+        "expect": "fail"
+      },
+      "dotnetTest": [
+        {
+          "project": "JsonRepair.sln",
+          "expect": "fail"
+        }
+      ]
+    },
+    "final": {
+      "json": {
+        "files": [
+          "appsettings.json"
+        ],
+        "expect": "pass"
+      },
+      "dotnetTest": [
+        {
+          "project": "JsonRepair.sln",
+          "expect": "pass"
+        }
+      ]
+    }
+  },
+  "scoring": {
+    "precisionMode": "touch-list",
+    "allowedFiles": [
+      "appsettings.json"
+    ],
+    "maxUnnecessaryFiles": 0
+  }
+}
