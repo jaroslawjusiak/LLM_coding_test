@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { diffTrees, maxIndentDepth, matchGroups } from "./diff.ts";
 import { copyHidden, copyTree, readText } from "./files.ts";
-import type { CheckSet, DotnetCheck, TaskManifest } from "./manifest.ts";
+import type { CheckSet, DotnetCheck, NpmCheck, TaskManifest } from "./manifest.ts";
 import { DOTNET_ENV, NPM_ENV, npmCommand, runProcess, tail } from "./process.ts";
 
 export interface CheckOutcome {
@@ -117,7 +117,7 @@ async function runCheckSetInPlace(workspace: string, checks: CheckSet, context: 
   }
   for (const check of checks.dotnetBuild ?? []) outcomes.push(await runDotnetBuild(workspace, check));
   for (const check of checks.dotnetTest ?? []) outcomes.push(await runDotnetTest(workspace, check, context));
-  for (const check of checks.npm ?? []) outcomes.push(await runNpm(workspace, check.script, check.expect, check.cwd, context, check.includeHidden, check.minFailedTests));
+  for (const check of checks.npm ?? []) outcomes.push(await runNpm(workspace, check, context));
   return outcomes;
 }
 
@@ -227,7 +227,8 @@ async function runDotnetTest(workspace: string, check: DotnetCheck, context: Che
 
 const installed = new Set<string>();
 
-async function runNpm(workspace: string, script: "build" | "test", expect: "pass" | "fail", cwd: string | undefined, context: CheckContext, includeHidden?: boolean, minFailedTests?: number): Promise<CheckOutcome> {
+async function runNpm(workspace: string, check: NpmCheck, context: CheckContext): Promise<CheckOutcome> {
+  const { script, expect, cwd, includeHidden, minFailedTests } = check;
   if (includeHidden && context.hiddenDir && context.manifest) copyHidden(context.hiddenDir, workspace, context.manifest.hiddenCopy);
   const dir = cwd ? path.join(workspace, cwd) : workspace;
   const name = `npm ${script} ${expect}${includeHidden ? " +hidden" : ""}`;
@@ -254,13 +255,25 @@ async function runNpm(workspace: string, script: "build" | "test", expect: "pass
   }
   const passed = result.code === 0 && !result.timedOut;
   const failedTests = counts.failedTests ?? 0;
-  const ok = (expect === "pass" ? passed : !passed) && failureEvidenced(expect, counts, minFailedTests);
-  const expected = expect === "fail" && minFailedTests ? `, at least ${minFailedTests} failed` : "";
+  // A red build has to be red because the compiler reported errors, not because a
+  // dependency or the script itself was missing.
+  const errorPrefix = check.errorPattern ?? "TS";
+  const errors = script === "build" ? countBuildErrors(result.output, errorPrefix) : 0;
+  const evidenced =
+    failureEvidenced(expect, counts, minFailedTests) &&
+    (expect !== "fail" || !check.minErrors || errors >= check.minErrors);
+  const ok = (expect === "pass" ? passed : !passed) && evidenced;
+  const expected = [
+    expect === "fail" && minFailedTests ? `at least ${minFailedTests} failed` : "",
+    expect === "fail" && check.minErrors ? `at least ${check.minErrors} ${errorPrefix} errors` : "",
+  ].filter(Boolean);
+  const summary = script === "build" ? `${errors} ${errorPrefix} errors` : `${counts.passedTests ?? 0}/${counts.totalTests ?? 0} passed, ${failedTests} failed`;
   return {
     name,
     ok,
     ...counts,
-    detail: result.timedOut ? "timed out" : `exit ${result.code}, ${counts.passedTests ?? 0}/${counts.totalTests ?? 0} passed, ${failedTests} failed${expected}\n${tail(result.output, 30)}`,
+    errorCount: script === "build" ? errors : undefined,
+    detail: result.timedOut ? "timed out" : `exit ${result.code}, ${summary}${expected.length ? `, expected ${expected.join(" and ")}` : ""}\n${tail(result.output, 30)}`,
   };
 }
 

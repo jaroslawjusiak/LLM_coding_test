@@ -20,6 +20,10 @@ export interface NpmCheck {
   cwd?: string;
   /** With expect "fail", require this many failed tests, so the run proves tests executed. */
   minFailedTests?: number;
+  /** With expect "fail" on a build, require this many reported errors, counted by errorPattern. */
+  minErrors?: number;
+  /** Error code prefix to count, "TS" by default for npm builds. */
+  errorPattern?: string;
   includeHidden?: boolean;
 }
 

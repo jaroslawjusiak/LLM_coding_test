@@ -661,7 +661,7 @@ describe("format", () => {
     rootCause: "Syntax errors in UserCard.tsx and a missing brace in UserList.tsx.",
     correctFix: "Repair the syntax and leave strings and helper results unchanged.",
     checks: {
-      initial: { npm: [{ script: "build", expect: "fail" }] },
+      initial: { npm: [{ script: "build", expect: "fail", minErrors: 3, errorPattern: "TS" }] },
       final: { npm: [{ script: "build", expect: "pass" }, { script: "test", expect: "pass" }] },
     },
     scoring: { precisionMode: "touch-list", maxUnnecessaryFiles: 0 },

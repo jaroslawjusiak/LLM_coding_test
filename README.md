@@ -87,10 +87,10 @@ A run the tool reported as successful but whose summary this harness could not c
 
 A red baseline has to prove why it is red, or any collapse of the run counts as the expected defect:
 
-- `minErrors` with `errorPattern` restricts the count to one family of error codes, so `"minErrors": 1, "errorPattern": "NU"` says BLD-003 is red because a package does not restore, and `"minErrors": 3, "errorPattern": "CS"` says BLD-002 is red because of three compiler errors.
+- `minErrors` with `errorPattern` restricts the count to one family of error codes. `"minErrors": 1, "errorPattern": "NU"` says BLD-003 is red because a package does not restore, `"minErrors": 3, "errorPattern": "CS"` says BLD-002 is red because of three compiler errors, and `"minErrors": 3, "errorPattern": "TS"` says SYN-005 is red because `tsc` reported syntax errors rather than because a dependency was missing. `TS` is the default prefix for npm builds.
 - `minFailedTests` requires that many failed tests, so a baseline that never reached the test runner does not pass for being red.
 
-Every `expect: "fail"` baseline in the catalog now declares one of the two, except BLD-005 and SYN-003, whose existing `minErrors` values were tuned against real compiler output and are left alone rather than guessed at.
+Every `expect: "fail"` baseline in the catalog now declares one of the two. BLD-005 and SYN-003 keep the `minErrors` values they already had, because those were tuned against real compiler output and re-deriving them would have been a guess.
 
 Dimensions that a task does not declare are left out of the score, so a gold patch is not penalized for a check the task never asked for. That is why a syntax task can score 25/45 on a machine without the SDK: only the dimensions the task declares are in `maxScore`.
 
