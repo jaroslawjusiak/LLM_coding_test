@@ -5,7 +5,7 @@ import { repoRootFromHere, writeText } from "./files.ts";
 import { loadTasks } from "./manifest.ts";
 import { packageTask } from "./packageTask.ts";
 import { runModel } from "./runModel.ts";
-import { renderReport, scoreSubmission } from "./score.ts";
+import { renderReport, scoreSubmission, weightsFor } from "./score.ts";
 import { verifyTask } from "./verify.ts";
 import { copyTree } from "./files.ts";
 import os from "node:os";
@@ -38,6 +38,7 @@ const command = positionals[0] ?? "help";
 if (command === "help" || values.help) {
   console.log(`Usage:
   node harness/src/cli.ts list [--markdown]
+  node harness/src/cli.ts weights [--task <id>] [--markdown]
   node harness/src/cli.ts package <task-id> --out <dir>
   node harness/src/cli.ts score <task-id> --workspace <dir> [--model name] [--report file] [--use-gold] [--skip-baseline]
   node harness/src/cli.ts verify [--task <id>] [--allow-missing-dotnet] [--skip-execute]
@@ -61,6 +62,25 @@ if (command === "list") {
     for (const task of tasks) {
       const m = task.manifest;
       console.log(`${m.id}\tT${m.tier}\t${m.difficulty}\t${m.languages.join("+")}\t${m.title}`);
+    }
+  }
+  process.exit(0);
+}
+
+if (command === "weights") {
+  const tasks = loadTasks(repoRoot, values.task);
+  const columns = ["build", "tests", "hidden", "findings", "rootCause", "precision", "regressionTest", "unchanged"] as const;
+  if (values.markdown) {
+    console.log(`| ID | Category | ${columns.join(" | ")} | Max | Not scored |`);
+    console.log(`| --- | --- | ${columns.map(() => "---").join(" | ")} | --- | --- |`);
+  }
+  for (const task of tasks) {
+    const { weights, maxScore, excluded } = weightsFor(task);
+    const cells = columns.map((column) => String(weights[column]));
+    if (values.markdown) {
+      console.log(`| ${task.manifest.id} | ${task.manifest.category} | ${cells.join(" | ")} | ${maxScore} | ${excluded.join(", ") || "-"} |`);
+    } else {
+      console.log(`${task.manifest.id}\tmax ${String(maxScore).padStart(3)}\t${columns.map((column, index) => `${column}=${cells[index]}`).filter((cell) => !cell.endsWith("=0")).join(" ")}\texcluded: ${excluded.join(", ") || "none"}`);
     }
   }
   process.exit(0);

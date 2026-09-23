@@ -3,10 +3,13 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { countBuildErrors, parseDotnetTest, parseFileBlocks, parseVitest, toolchainMissing, type CheckOutcome } from "../src/checks.ts";
+import { countBuildErrors, environmentFailure, parseDotnetTest, parseFileBlocks, parseVitest, toolchainMissing, type CheckOutcome } from "../src/checks.ts";
 import { lineDiffCounts, matchGroups, maxIndentDepth } from "../src/diff.ts";
-import type { LoadedTask } from "../src/manifest.ts";
-import { renderReport, scoreSubmission } from "../src/score.ts";
+import { loadTasks, type LoadedTask } from "../src/manifest.ts";
+import { repoRootFromHere } from "../src/files.ts";
+import { DOTNET_ENV } from "../src/process.ts";
+import { describeFailure } from "../src/runModel.ts";
+import { renderReport, scoreSubmission, weightsFor } from "../src/score.ts";
 
 test("file blocks parse writes and deletes", () => {
   const parsed = parseFileBlocks(`notes
@@ -52,7 +55,15 @@ test("dotnet and vitest summaries parse", () => {
   assert.equal(countBuildErrors("a.cs(1,1): error CS1002: ; expected\nerror NU1102: missing"), 2);
 });
 
-test("a missing toolchain is reported as SKIP and earns no credit", () => {
+interface SyntaxFixture {
+  root: string;
+  original: string;
+  submission: string;
+  task: LoadedTask;
+}
+
+/** A correct SYN-001 style submission: the brace closed, plus the ANSWER.md the prompt asks for. */
+function syntaxFixture(): SyntaxFixture {
   const root = mkdtempSync(path.join(os.tmpdir(), "llm-score-"));
   const original = path.join(root, "original");
   const submission = path.join(root, "submission");
@@ -81,9 +92,14 @@ test("a missing toolchain is reported as SKIP and earns no credit", () => {
       scoring: { precisionMode: "touch-list", allowedFiles: ["appsettings.json"], maxUnnecessaryFiles: 0 },
     },
   };
+  return { root, original, submission, task };
+}
+
+test("a missing toolchain is reported as SKIP and earns no credit", () => {
+  const { original, submission, task } = syntaxFixture();
   const final: CheckOutcome[] = [
     { name: "json pass", ok: true, detail: "parsed" },
-    { name: "dotnet test JsonRepair.sln pass", ok: false, skipped: true, tool: "dotnet", detail: "dotnet is not on PATH" },
+    { name: "dotnet test JsonRepair.sln pass", ok: false, skipped: true, tool: "dotnet", skipReason: "is not on PATH", detail: "dotnet is not on PATH" },
   ];
 
   const report = scoreSubmission(task, original, submission, final, [], "local-model", 3_000);
@@ -103,6 +119,81 @@ test("a missing toolchain is reported as SKIP and earns no credit", () => {
   assert.match(markdown, /precision: 100% of 15/);
   assert.match(markdown, /not scored \(task does not declare them\): build, hidden tests, findings, root cause/);
   assert.match(markdown, /\+1\/-0\tANSWER\.md/);
+});
+
+test("a summary the harness cannot read is WARN, not FAIL", () => {
+  const { original, submission, task } = syntaxFixture();
+  const final: CheckOutcome[] = [
+    { name: "json pass", ok: true, detail: "parsed" },
+    { name: "dotnet test JsonRepair.sln pass", ok: true, unverified: true, detail: "exit 0, but no test summary could be parsed" },
+  ];
+  const report = scoreSubmission(task, original, submission, final, [], "local-model", 1_000);
+  assert.equal(report.tests.final, "PASS (unverified)");
+  assert.deepEqual(report.environment, []);
+  // dotnet said the run succeeded, so the points are not withheld.
+  assert.equal(report.score, 35);
+  assert.equal(report.maxScore, 35);
+  assert.match(renderReport(report), /WARN dotnet test JsonRepair\.sln pass/);
+});
+
+test("only connectivity and SDK failures count as environmental", () => {
+  const offline = environmentFailure("dotnet", "error NU1301: Unable to load the service index for source https://api.nuget.org/v3/index.json");
+  assert.equal(offline?.reason, "could not reach the package source");
+  const sdk = environmentFailure("dotnet", "error NETSDK1045: The current .NET SDK does not support targeting .NET 8.0");
+  assert.equal(sdk?.reason, "is not an SDK that can build this task");
+  const registry = environmentFailure("npm", "npm error code EAI_AGAIN\nnpm error request to https://registry.npmjs.org/react failed");
+  assert.equal(registry?.reason, "could not reach the npm registry");
+  // A package or version that does not exist is a content failure, and it is the
+  // intended defect of BLD-003, so it must never be excused as environmental.
+  assert.equal(environmentFailure("dotnet", "error NU1102: Unable to find package Newtonsoft.Json version 99.0.0"), null);
+  assert.equal(environmentFailure("dotnet", "Program.cs(4,9): error CS1002: ; expected"), null);
+  assert.equal(environmentFailure("npm", "FAIL src/orders.test.tsx > sends the bearer token\nAssertionError: expected 401"), null);
+});
+
+test("error counts can be restricted to compiler errors", () => {
+  const output = "a.cs(1,1): error CS1002: ; expected\nerror NU1102: unable to find package";
+  assert.equal(countBuildErrors(output), 2);
+  assert.equal(countBuildErrors(output, "CS"), 1);
+  assert.equal(countBuildErrors(output, "NU"), 1);
+});
+
+test("the .NET CLI is pinned to English so summaries parse", () => {
+  assert.equal(DOTNET_ENV.DOTNET_CLI_UI_LANGUAGE, "en");
+  assert.deepEqual(parseDotnetTest("Passed!  - Failed:     0, Passed:     1, Skipped:     0, Total:     1"), {
+    failedTests: 0,
+    passedTests: 1,
+    totalTests: 1,
+  });
+  // A localized CLI prints no recognisable summary, which used to read as zero tests.
+  assert.deepEqual(parseDotnetTest("Zaliczono!  - Niepowodzenie:     0, Zaliczono:     1, Razem:     1"), {});
+});
+
+test("a task scores only the dimensions it declares", () => {
+  const root = repoRootFromHere(import.meta.url);
+  const syntax = weightsFor(loadTasks(root, "SYN-001")[0]);
+  assert.equal(syntax.maxScore, 35);
+  assert.deepEqual(syntax.excluded, ["build", "hidden tests", "findings", "root cause"]);
+  const analysis = weightsFor(loadTasks(root, "SPEC-005")[0]);
+  assert.equal(analysis.maxScore, 100);
+  assert.deepEqual(analysis.excluded, []);
+  assert.equal(analysis.weights.findings + analysis.weights.unchanged, 100);
+});
+
+test("hidden test output is never sent back to the model", () => {
+  const hidden = describeFailure({
+    name: "dotnet test Notify.sln pass +hidden",
+    ok: false,
+    totalTests: 4,
+    passedTests: 2,
+    detail: "Failed Dispatch_enqueues_only [42 ms]\nAssert.Equal() Failure: Expected 1, Actual 2\n  at OutboxHiddenTests.Sends_once()",
+  });
+  assert.match(hidden, /2\/4 passed/);
+  assert.doesNotMatch(hidden, /OutboxHiddenTests/);
+  assert.doesNotMatch(hidden, /Expected 1, Actual 2/);
+  assert.doesNotMatch(hidden, /Dispatch_enqueues_only/);
+
+  const visible = describeFailure({ name: "dotnet test Notify.sln pass", ok: false, detail: "Assert.Equal() Failure: Expected 404" });
+  assert.match(visible, /Expected 404/);
 });
 
 test("spawn failures are recognised as a missing toolchain", () => {

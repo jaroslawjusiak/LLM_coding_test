@@ -6,7 +6,7 @@ import { defaultWeights, type LoadedTask, type ScoreWeights } from "./manifest.t
 
 export interface CheckLine {
   name: string;
-  state: "pass" | "fail" | "skipped";
+  state: "pass" | "fail" | "skipped" | "unverified";
   detail: string;
 }
 
@@ -120,10 +120,10 @@ export function scoreSubmission(
     findingsMissed: groups.missed,
     checks: finalOutcomes.map((item) => ({
       name: item.name,
-      state: item.skipped ? "skipped" : item.ok ? "pass" : "fail",
+      state: item.skipped ? "skipped" : item.unverified ? "unverified" : item.ok ? "pass" : "fail",
       detail: item.detail,
     })),
-    environment: missingToolchains(initialOutcomes, finalOutcomes),
+    environment: environmentProblems(initialOutcomes, finalOutcomes),
     excluded,
     score,
     maxScore,
@@ -149,16 +149,28 @@ function excludedDimensions(declared: ScoreWeights, effective: ScoreWeights): st
     .map((key) => DIMENSION_LABELS[key]);
 }
 
-/** Tools that were absent, reported as `tool (N checks could not run)`. */
-function missingToolchains(...sets: CheckOutcome[][]): string[] {
+/** What a task can score before anything runs, so a max score below 100 explains itself. */
+export function weightsFor(task: LoadedTask): { weights: ScoreWeights; maxScore: number; excluded: string[] } {
+  const declared: ScoreWeights = { ...defaultWeights(task.manifest.category), ...task.manifest.scoring.weights };
+  const weights = effectiveWeights(task, declared);
+  return {
+    weights,
+    maxScore: Object.values(weights).reduce((sum, weight) => sum + weight, 0),
+    excluded: excludedDimensions(declared, weights),
+  };
+}
+
+/** Toolchain problems, reported as `tool reason (N checks could not run)`. */
+function environmentProblems(...sets: CheckOutcome[][]): string[] {
   const counts = new Map<string, number>();
   for (const outcomes of sets) {
     for (const outcome of outcomes) {
       if (!outcome.skipped || !outcome.tool) continue;
-      counts.set(outcome.tool, (counts.get(outcome.tool) ?? 0) + 1);
+      const key = `${outcome.tool} ${outcome.skipReason ?? "was unavailable"}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
     }
   }
-  return [...counts.entries()].map(([tool, count]) => `${tool} is not on PATH (${count} check${count === 1 ? "" : "s"} could not run)`);
+  return [...counts.entries()].map(([problem, count]) => `${problem} (${count} check${count === 1 ? "" : "s"} could not run)`);
 }
 
 function effectiveWeights(task: LoadedTask, weights: ScoreWeights): ScoreWeights {
@@ -231,9 +243,10 @@ function testFraction(outcomes: CheckOutcome[]): string {
   const tests = outcomes.filter((item) => item.name.includes("dotnet test") || item.name.includes("npm test"));
   if (tests.length === 0) return "N/A";
   if (tests.every((item) => item.skipped)) return "SKIP";
+  const unverified = tests.some((item) => item.unverified);
   const passed = tests.reduce((sum, item) => sum + (item.passedTests ?? 0), 0);
   const total = tests.reduce((sum, item) => sum + (item.totalTests ?? 0), 0);
-  if (!total) return tests.every((item) => item.ok) ? "PASS" : "FAIL";
+  if (!total) return tests.every((item) => item.ok) ? (unverified ? "PASS (unverified)" : "PASS") : "FAIL";
   return `${passed}/${total}`;
 }
 
@@ -250,7 +263,7 @@ export function renderReport(report: ScoreReport): string {
       "!! ENVIRONMENT PROBLEM - THIS SCORE IS NOT A MEASUREMENT OF THE MODEL",
       ...report.environment.map((item) => `   ${item}`),
       "   Checks that could not run are reported as SKIP and earn no points.",
-      "   Install the missing toolchain and score again before drawing conclusions.",
+      "   Fix the machine, then score again before drawing conclusions.",
       "",
     );
   }
@@ -270,6 +283,8 @@ export function renderReport(report: ScoreReport): string {
     "",
     "  Initial states report whether the starting workspace matched what the task",
     "  declares (a task that starts red should be red). They are not passing tests.",
+    "  SKIP means the toolchain could not run the check; WARN means it reported",
+    "  success in a form this harness could not count. Neither is a failure of the code.",
     "",
     `Files changed: ${report.filesChanged}`,
     `Lines added: ${report.linesAdded}`,
@@ -310,7 +325,7 @@ export function renderReport(report: ScoreReport): string {
 }
 
 function renderCheck(check: CheckLine): string[] {
-  const state = check.state === "pass" ? "ok  " : check.state === "skipped" ? "SKIP" : "FAIL";
+  const state = { pass: "ok  ", skipped: "SKIP", unverified: "WARN", fail: "FAIL" }[check.state];
   const out = [`  ${state} ${check.name}`];
   if (check.state === "pass") return out;
   const detail = check.detail.trim().split(/\r?\n/).slice(0, 8).filter((line) => line.trim().length > 0);

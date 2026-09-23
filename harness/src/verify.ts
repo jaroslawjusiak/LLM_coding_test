@@ -39,8 +39,8 @@ export async function verifyTask(task: LoadedTask, options: VerifyOptions = {}):
     const initial = await runCheckSet(initialDir, manifest.checks.initial, { hiddenDir: hidden, manifest, originalWorkspace: workspace });
     const skipped = initial.filter((outcome) => outcome.skipped);
     if (skipped.length > 0) {
-      const tools = [...new Set(skipped.map((outcome) => outcome.tool))].join(", ");
-      const message = `${manifest.id}: ${tools} is not on PATH, ${skipped.length} check(s) could not run`;
+      const problems = [...new Set(skipped.map((outcome) => `${outcome.tool} ${outcome.skipReason ?? "was unavailable"}`))].join("; ");
+      const message = `${manifest.id}: ${problems}, ${skipped.length} check(s) could not run`;
       if (options.allowMissingDotnet) return { ok: true, log: `SKIP ${message}` };
       return { ok: false, log: `FAIL ${message}` };
     }

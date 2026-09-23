@@ -1,5 +1,5 @@
 import path from "node:path";
-import { parseFileBlocks, runCheckSet } from "./checks.ts";
+import { parseFileBlocks, runCheckSet, type CheckOutcome } from "./checks.ts";
 import { relFiles, readText, writeText } from "./files.ts";
 import type { LoadedTask } from "./manifest.ts";
 import { rmSync } from "node:fs";
@@ -59,16 +59,29 @@ export async function runModel(task: LoadedTask, options: RunModelOptions): Prom
     const failed = outcomes.filter((item) => !item.ok);
     if (failed.length === 0 || turn === options.maxTurns) break;
     if (failed.every((item) => item.skipped)) {
-      const tools = [...new Set(failed.map((item) => item.tool).filter(Boolean))].join(", ");
-      throw new Error(`Cannot grade ${task.manifest.id}: ${tools} is not on PATH. Install it and run again.`);
+      const problems = [...new Set(failed.map((item) => `${item.tool} ${item.skipReason ?? "was unavailable"}`))].join("; ");
+      throw new Error(`Cannot grade ${task.manifest.id}: ${problems}. Fix the machine and run again; the model cannot.`);
     }
     messages.push({ role: "assistant", content: last });
     messages.push({
       role: "user",
-      content: `Checks still failing:\n${failed.map((item) => `## ${item.name}\n${item.detail}`).join("\n\n")}\n\nReturn corrected FILE blocks.`,
+      content: `Checks still failing:\n${failed.map(describeFailure).join("\n\n")}\n\nReturn corrected FILE blocks.`,
     });
   }
   return workspace;
+}
+
+/**
+ * What the model is told about a failed check. Hidden test output names the hidden
+ * assertions and their expected values, so feeding it back would leak the very
+ * check the model is not allowed to see. Report the count and nothing else.
+ */
+export function describeFailure(item: CheckOutcome): string {
+  if (item.name.includes("+hidden")) {
+    const counts = item.totalTests === undefined ? "did not pass" : `${item.passedTests ?? 0}/${item.totalTests} passed`;
+    return `## ${item.name}\nA hidden suite ran against your workspace and ${counts}. Its test names, messages, and expected values are not disclosed.`;
+  }
+  return `## ${item.name}\n${item.detail}`;
 }
 
 function renderWorkspace(workspace: string, maxChars: number): string {

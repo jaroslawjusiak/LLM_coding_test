@@ -22,6 +22,8 @@ node harness/src/cli.ts score BUG-001 --workspace /tmp/packaged/BUG-001/workspac
 
 `score` copies the workspace before running anything. Hidden tests are copied into that temporary copy only. They are never written back to the model workspace.
 
+`run` drives a model over an OpenAI compatible endpoint and re-prompts it with the checks that still fail. Hidden suites are reported to the model as a pass count only. Their test names, assertion messages, and expected values are never sent, because that text is the answer.
+
 ## Layout
 
 ```text
@@ -44,9 +46,12 @@ Node 22 or newer. The .NET 8 SDK is required for C# tasks.
 
 ```bash
 node harness/src/cli.ts list
+node harness/src/cli.ts weights --markdown
 node harness/src/cli.ts verify --task SYN-005
 node harness/src/cli.ts verify
 ```
+
+`weights` prints what each task can score before anything is compiled: the weight of every dimension, the maximum, and the dimensions the task does not declare. It runs no tools, so it works on a machine without the .NET SDK.
 
 `verify` checks two things:
 
@@ -72,7 +77,15 @@ node harness/src/cli.ts verify
 
 Line counts are a diff against the untouched workspace, so the `ANSWER.md` a prompt asks for is counted as added lines. The per file breakdown names every file behind the total.
 
-A check that could not run because its toolchain is absent is reported as `SKIP`, never as a pass. `SKIP` earns no points, the report opens with an environment warning, and `score` repeats it on stderr, because a score measured without `dotnet` or `npm` is not comparable to one measured with them. `run` stops instead of asking the model to fix a machine.
+A check that could not run is reported as `SKIP`, never as a pass. `SKIP` earns no points, the report opens with an environment warning, and `score` repeats it on stderr, because a score measured on a broken machine is not comparable to one measured on a working one. `run` stops instead of asking the model to fix a machine. Three things are treated as the machine rather than the model:
+
+- `dotnet` or `npm` is not on PATH.
+- The package source or registry could not be reached, or the installed SDK cannot target `net8.0` (`NU1301`, `NETSDK1045`, `MSB3644`, `EAI_AGAIN`). "Package or version not found" (`NU1101`, `NU1102`, npm 404) is deliberately not in this list: that is a content failure, and it is the intended defect of BLD-003.
+- Nothing classified as environmental when the compiler or the test runner did produce results, so a real red build or a failing test is never excused.
+
+A run the tool reported as successful but whose summary this harness could not count is `WARN`, and it keeps its points. `DOTNET_CLI_UI_LANGUAGE` is pinned to `en` for that reason: a localized CLI prints `Zaliczono: 5` instead of `Passed: 5`, which the parser reads as zero tests, which used to turn a passing submission into a failed check.
+
+A build check can require evidence with `minErrors`, and restrict that count to one family of error codes with `errorPattern`, so `"minErrors": 2, "errorPattern": "CS"` proves the build was red because of compiler errors rather than because a package did not restore.
 
 Dimensions that a task does not declare are left out of the score, so a gold patch is not penalized for a check the task never asked for. That is why a syntax task can score 15/35: only the dimensions the task declares are in `maxScore`. Analysis tasks score the written findings and whether the code was left unchanged. Refactor tasks keep behavior tests and hidden boundaries green, and they must reduce nesting or file length. Performance tasks use counters, not timers.
 

@@ -7,6 +7,8 @@ export interface DotnetCheck {
   project: string;
   expect: Expectation;
   minErrors?: number;
+  /** Restrict minErrors to errors whose code starts with this prefix, such as "CS". */
+  errorPattern?: string;
   includeHidden?: boolean;
 }
 

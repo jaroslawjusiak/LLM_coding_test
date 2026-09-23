@@ -49,6 +49,9 @@ export const DOTNET_ENV = {
   DOTNET_CLI_TELEMETRY_OPTOUT: "1",
   DOTNET_NOLOGO: "1",
   NUGET_XMLDOC_MODE: "skip",
+  // The test and build summaries are parsed in English. A localized CLI prints
+  // "Zaliczono: 5" instead of "Passed: 5" and the parser reads zero tests.
+  DOTNET_CLI_UI_LANGUAGE: "en",
 };
 
 export const NPM_ENV = {

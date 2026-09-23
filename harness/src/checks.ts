@@ -10,10 +10,14 @@ export interface CheckOutcome {
   name: string;
   ok: boolean;
   detail: string;
-  /** True when the toolchain this check needs is not installed, so it never ran. */
+  /** True when the toolchain this check needs is unavailable, so it never produced a result. */
   skipped?: boolean;
-  /** The missing tool, when skipped is true. */
+  /** The unavailable tool, when skipped is true. */
   tool?: string;
+  /** Why the tool was unavailable, phrased to follow the tool name. */
+  skipReason?: string;
+  /** True when the tool reported success but the harness could not read its counts. */
+  unverified?: boolean;
   passedTests?: number;
   failedTests?: number;
   totalTests?: number;
@@ -26,8 +30,53 @@ function missingTool(tool: string, name: string): CheckOutcome {
     ok: false,
     skipped: true,
     tool,
+    skipReason: "is not on PATH",
     detail: `${tool} is not on PATH, so this check never ran. An "expect: fail" check that is satisfied only by a missing toolchain is not evidence about the submission.`,
   };
+}
+
+function environmentSkip(tool: string, name: string, reason: string, signature: string): CheckOutcome {
+  return {
+    name,
+    ok: false,
+    skipped: true,
+    tool,
+    skipReason: reason,
+    detail: `${tool} ${reason}: "${signature}". This is a property of the machine, not of the submission, so the check earned nothing either way.`,
+  };
+}
+
+/**
+ * Connectivity and toolchain version failures, which say nothing about the code.
+ * "Package or version not found" (NU1101, NU1102, npm 404) is deliberately absent:
+ * that is a content failure, and it is the intended defect of tasks like BLD-003.
+ */
+const ENVIRONMENT_SIGNATURES: { tool: "dotnet" | "npm"; reason: string; pattern: RegExp }[] = [
+  {
+    tool: "dotnet",
+    reason: "could not reach the package source",
+    pattern: /NU1301|NU1306|NU1900|Unable to load the service index|Failed to download package|The SSL connection could not be established|A connection attempt failed because the connected party|No such host is known|Name or service not known|Temporary failure in name resolution|getaddrinfo|EAI_AGAIN|The request was canceled due to the configured request timeout/i,
+  },
+  {
+    tool: "dotnet",
+    reason: "is not an SDK that can build this task",
+    pattern: /NETSDK1045|MSB3644|MSB4236|The current \.NET SDK does not support|You must install or update \.NET to run this application/i,
+  },
+  {
+    tool: "npm",
+    reason: "could not reach the npm registry",
+    pattern: /EAI_AGAIN|ENOTFOUND|ETIMEDOUT|ECONNREFUSED|ECONNRESET|ERR_SOCKET_CONNECTION_TIMEOUT|network request failed|This is probably not a problem with npm/i,
+  },
+];
+
+/** Returns the matched signature when the output describes an environment failure. */
+export function environmentFailure(tool: "dotnet" | "npm", output: string): { reason: string; signature: string } | null {
+  for (const entry of ENVIRONMENT_SIGNATURES) {
+    if (entry.tool !== tool) continue;
+    const match = entry.pattern.exec(output);
+    if (match) return { reason: entry.reason, signature: match[0].trim() };
+  }
+  return null;
 }
 
 export interface CheckContext {
@@ -123,15 +172,21 @@ async function runDotnetBuild(workspace: string, check: DotnetCheck): Promise<Ch
   const name = `dotnet build ${check.project} ${check.expect}`;
   const result = await runProcess("dotnet", ["build", check.project, "-v", "q", "--nologo"], workspace, 240_000, DOTNET_ENV);
   if (result.missing) return missingTool("dotnet", name);
-  const errors = countBuildErrors(result.output);
+  const allErrors = countBuildErrors(result.output);
+  const errors = check.errorPattern ? countBuildErrors(result.output, check.errorPattern) : allErrors;
+  // If the compiler ran, the toolchain worked: only classify a run with no
+  // compiler errors as environmental, so a genuine red build is never excused.
+  const environment = countBuildErrors(result.output, "CS") === 0 ? environmentFailure("dotnet", result.output) : null;
+  if (environment) return environmentSkip("dotnet", name, environment.reason, environment.signature);
   const built = result.code === 0 && !result.timedOut;
   let ok = check.expect === "pass" ? built : !built;
   if (check.expect === "fail" && check.minErrors && errors < check.minErrors) ok = false;
+  const counted = check.errorPattern ? `${errors} ${check.errorPattern} errors of ${allErrors}` : `${errors} errors`;
   return {
     name,
     ok,
     errorCount: errors,
-    detail: result.timedOut ? "timed out" : `${built ? "built" : "failed"} with ${errors} errors\n${tail(result.output, 30)}`,
+    detail: result.timedOut ? "timed out" : `${built ? "built" : "failed"} with ${counted}\n${tail(result.output, 30)}`,
   };
 }
 
@@ -143,7 +198,22 @@ async function runDotnetTest(workspace: string, check: DotnetCheck, context: Che
   const result = await runProcess("dotnet", ["test", check.project, "-v", "q", "--nologo"], workspace, 300_000, DOTNET_ENV);
   if (result.missing) return missingTool("dotnet", name);
   const counts = parseDotnetTest(result.output);
-  const passed = result.code === 0 && !result.timedOut && (counts.failedTests ?? 0) === 0 && (counts.totalTests ?? 0) > 0;
+  const summarised = counts.totalTests !== undefined;
+  if (!summarised && countBuildErrors(result.output, "CS") === 0) {
+    const environment = environmentFailure("dotnet", result.output);
+    if (environment) return environmentSkip("dotnet", name, environment.reason, environment.signature);
+    if (result.code === 0 && !result.timedOut) {
+      // dotnet reported success but the summary was unreadable, which a localized
+      // CLI does. Trust the exit code and say out loud that the counts are unknown.
+      return {
+        name,
+        ok: check.expect === "pass",
+        unverified: true,
+        detail: `exit 0, but no test summary could be parsed, so the counts are unknown. The .NET CLI is probably not reporting in English; DOTNET_CLI_UI_LANGUAGE is set to "en" by this harness.\n${tail(result.output, 30)}`,
+      };
+    }
+  }
+  const passed = result.code === 0 && !result.timedOut && summarised && (counts.failedTests ?? 0) === 0 && (counts.totalTests ?? 0) > 0;
   const ok = check.expect === "pass" ? passed : !passed;
   return {
     name,
@@ -165,6 +235,8 @@ async function runNpm(workspace: string, script: "build" | "test", expect: "pass
     const install = await runProcess(npm, [lock ? "ci" : "install", "--no-fund", "--no-audit"], dir, 240_000, NPM_ENV);
     if (toolchainMissing(install)) return missingTool("npm", name);
     if (install.code !== 0) {
+      const installEnvironment = environmentFailure("npm", install.output);
+      if (installEnvironment) return environmentSkip("npm", name, installEnvironment.reason, installEnvironment.signature);
       return { name, ok: false, detail: `npm install failed\n${tail(install.output, 40)}` };
     }
     installed.add(dir);
@@ -172,6 +244,12 @@ async function runNpm(workspace: string, script: "build" | "test", expect: "pass
   const result = await runProcess(npm, ["run", script], dir, 240_000, NPM_ENV);
   if (toolchainMissing(result)) return missingTool("npm", name);
   const counts = parseVitest(result.output);
+  // Only an unsummarised run can be environmental: if vitest reported counts, the
+  // failure belongs to the code even when a test prints a network error itself.
+  if (result.code !== 0 && counts.totalTests === undefined) {
+    const environment = environmentFailure("npm", result.output);
+    if (environment) return environmentSkip("npm", name, environment.reason, environment.signature);
+  }
   const passed = result.code === 0 && !result.timedOut;
   const ok = expect === "pass" ? passed : !passed;
   return {
@@ -188,9 +266,10 @@ export function toolchainMissing(result: { code: number; output: string; missing
   return result.code === 127 && /is not recognized as an internal or external command|command not found/i.test(result.output);
 }
 
-export function countBuildErrors(output: string): number {
+export function countBuildErrors(output: string, codePrefix?: string): number {
   const matches = output.match(/(?:^|\s)error [A-Z]{1,4}\d{3,5}:/g) ?? [];
-  return matches.length;
+  if (!codePrefix) return matches.length;
+  return matches.filter((match) => match.includes(`error ${codePrefix}`)).length;
 }
 
 export function parseDotnetTest(output: string): { passedTests?: number; failedTests?: number; totalTests?: number } {
