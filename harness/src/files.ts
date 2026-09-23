@@ -1,15 +1,12 @@
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const SKIP_DIR = new Set(["node_modules", "bin", "obj", ".vs", "TestResults", "dist", "coverage"]);
 
 export function repoRootFromHere(importMetaUrl: string): string {
-  return path.resolve(path.dirname(fileUrlToPath(importMetaUrl)), "..", "..");
-}
-
-function fileUrlToPath(url: string): string {
-  return new URL(url).pathname;
+  return path.resolve(path.dirname(fileURLToPath(importMetaUrl)), "..", "..");
 }
 
 export function walkFiles(dir: string): string[] {
