@@ -22,7 +22,8 @@
       "dotnetTest": [
         {
           "project": "JsonRepair.sln",
-          "expect": "fail"
+          "expect": "fail",
+          "minFailedTests": 1
         }
       ]
     },
@@ -46,6 +47,9 @@
     "allowedFiles": [
       "appsettings.json"
     ],
-    "maxUnnecessaryFiles": 0
+    "maxUnnecessaryFiles": 0,
+    "weights": {
+      "gates": 10
+    }
   }
 }

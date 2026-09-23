@@ -4,6 +4,15 @@ export interface ProcessResult {
   code: number;
   output: string;
   timedOut: boolean;
+  /** True when the executable itself could not be spawned (not on PATH). */
+  missing?: boolean;
+}
+
+/** CSI and OSC sequences. Test runners colourise their summaries when CI is set. */
+const ANSI_PATTERN = /\u001b\[[0-9;?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
+
+export function stripAnsi(text: string): string {
+  return text.replace(ANSI_PATTERN, "");
 }
 
 export function runProcess(command: string, args: string[], cwd: string, timeoutMs = 180_000, extraEnv: Record<string, string> = {}): Promise<ProcessResult> {
@@ -20,6 +29,9 @@ export function runProcess(command: string, args: string[], cwd: string, timeout
       output += chunk.toString("utf8");
       if (output.length > 400_000) output = output.slice(-300_000);
     };
+    // Parsers match on plain text, and reports are read by people. Colour codes
+    // survive a pipe, so vitest's "Tests 2 failed (2)" arrives wrapped in them.
+    const plain = () => stripAnsi(output);
     child.stdout?.on("data", append);
     child.stderr?.on("data", append);
     let timedOut = false;
@@ -29,11 +41,12 @@ export function runProcess(command: string, args: string[], cwd: string, timeout
     }, timeoutMs);
     child.on("error", (error) => {
       clearTimeout(timer);
-      resolve({ code: 127, output: output + `\n${error.message}`, timedOut });
+      const missing = (error as NodeJS.ErrnoException).code === "ENOENT";
+      resolve({ code: 127, output: `${plain()}\n${error.message}`, timedOut, missing });
     });
     child.on("close", (code) => {
       clearTimeout(timer);
-      resolve({ code: code ?? 1, output, timedOut });
+      resolve({ code: code ?? 1, output: plain(), timedOut });
     });
   });
 }
@@ -46,9 +59,15 @@ export const DOTNET_ENV = {
   DOTNET_CLI_TELEMETRY_OPTOUT: "1",
   DOTNET_NOLOGO: "1",
   NUGET_XMLDOC_MODE: "skip",
+  // The test and build summaries are parsed in English. A localized CLI prints
+  // "Zaliczono: 5" instead of "Passed: 5" and the parser reads zero tests.
+  DOTNET_CLI_UI_LANGUAGE: "en",
+  // Colour codes survive a pipe and hide the numbers the parsers match on.
+  NO_COLOR: "1",
 };
 
 export const NPM_ENV = {
+  NO_COLOR: "1",
   npm_config_fund: "false",
   npm_config_audit: "false",
   npm_config_update_notifier: "false",

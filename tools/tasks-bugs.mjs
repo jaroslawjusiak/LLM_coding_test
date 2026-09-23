@@ -92,7 +92,7 @@ public class CacheHiddenTests
     checks: {
       initial: {
         dotnetBuild: [{ project: "CacheBug.sln", expect: "pass" }],
-        dotnetTest: [{ project: "CacheBug.sln", expect: "fail" }],
+        dotnetTest: [{ project: "CacheBug.sln", expect: "fail", minFailedTests: 1 }],
       },
       final: {
         dotnetBuild: [{ project: "CacheBug.sln", expect: "pass" }],
@@ -239,7 +239,7 @@ describe("access", () => {
       initial: {
         npm: [
           { script: "build", expect: "pass" },
-          { script: "test", expect: "fail" },
+          { script: "test", expect: "fail", minFailedTests: 1 },
         ],
       },
       final: { npm: [{ script: "build", expect: "pass" }, { script: "test", expect: "pass" }] },
@@ -370,7 +370,7 @@ public class DockerCodeGuardTests
     checks: {
       initial: {
         dotnetBuild: [{ project: "DockerTrap.sln", expect: "pass" }],
-        dotnetTest: [{ project: "DockerTrap.sln", expect: "fail" }],
+        dotnetTest: [{ project: "DockerTrap.sln", expect: "fail", minFailedTests: 1 }],
       },
       final: {
         dotnetTest: [
@@ -477,11 +477,11 @@ function bug004() {
 
 The project builds and the existing tests pass. That is not sufficient. Read \`docs/notifications.md\` and \`history/\`. The sample log in \`diagnostics/sample-log.txt\` is from an earlier incident and may not be the current defect.
 
-Identify the root cause, fix it, and add a regression test. Preserve the outbox design: dispatch enqueues, and the outbox processor is the only component that sends. Run \`dotnet test\`.`,
+Identify the root cause, fix it, and add a regression test in \`tests/Notify.Tests/DuplicateEmailRegressionTests.cs\`. Preserve the outbox design: dispatch enqueues, and the outbox processor is the only component that sends. Run \`dotnet test\`.`,
   );
   rubric(id, `# BUG-004
 
-Commit C added a direct send on top of the outbox enqueue. The visible test only calls Dispatch and therefore stays green. Gold removes the direct send and adds a regression test that flushes the processor. The misleading log is a NullReferenceException in UserService from an older incident.`);
+Commit C added a direct send on top of the outbox enqueue. The visible test only calls Dispatch and therefore stays green. Gold removes the direct send and adds a regression test that flushes the processor. The prompt names \`tests/Notify.Tests/DuplicateEmailRegressionTests.cs\` because \`requireFile\` locks that path, and \`regressionTestPatterns\` awards the regression-test points for what a changed test file says rather than for what it is called. The misleading log is a NullReferenceException in UserService from an older incident.`);
   const lib = guid();
   add(`tasks/${id}/workspace/Notify.sln`, sln("Notify", [
     { name: "Notify", path: "src/Notify/Notify.csproj", guid: lib },
@@ -602,7 +602,7 @@ public class OutboxHiddenTests
         dotnetBuild: [{ project: "Notify.sln", expect: "pass" }],
         dotnetTest: [
           { project: "Notify.sln", expect: "pass" },
-          { project: "Notify.sln", expect: "fail", includeHidden: true },
+          { project: "Notify.sln", expect: "fail", includeHidden: true, minFailedTests: 1 },
         ],
       },
       final: {
@@ -613,7 +613,14 @@ public class OutboxHiddenTests
         requireFile: ["tests/Notify.Tests/DuplicateEmailRegressionTests.cs"],
       },
     },
-    scoring: { precisionMode: "max-files", maxChangedFiles: 4, requireRegressionTest: true, rootCausePatterns: ["enqueue", "outbox"] },
+    scoring: {
+      precisionMode: "max-files",
+      maxChangedFiles: 4,
+      requireRegressionTest: true,
+      regressionTestPatterns: ["duplicate", "regression", "flush"],
+      rootCausePatterns: ["enqueue", "outbox"],
+      weights: { gates: 10 },
+    },
   });
 }
 
@@ -903,7 +910,7 @@ public class UnknownUserTests : IClassFixture<WebApplicationFactory<Program>>
       initial: {
         dotnetTest: [
           { project: "Users.sln", expect: "pass" },
-          { project: "Users.sln", expect: "fail", includeHidden: true },
+          { project: "Users.sln", expect: "fail", includeHidden: true, minFailedTests: 1 },
         ],
       },
       final: {

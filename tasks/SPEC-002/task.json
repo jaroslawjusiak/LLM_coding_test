@@ -22,7 +22,8 @@
       "dotnetTest": [
         {
           "project": "Payments.sln",
-          "expect": "fail"
+          "expect": "fail",
+          "minFailedTests": 1
         }
       ]
     },

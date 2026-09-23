@@ -28,7 +28,8 @@
         {
           "script": "test",
           "expect": "fail",
-          "includeHidden": true
+          "includeHidden": true,
+          "minFailedTests": 1
         }
       ]
     },

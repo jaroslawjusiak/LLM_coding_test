@@ -81,7 +81,10 @@ export function diffTrees(originalDir: string, modifiedDir: string): DiffSummary
 
 function countLines(file: string): number {
   try {
-    return readText(file).replace(/\r\n/g, "\n").split("\n").length;
+    const lines = readText(file).replace(/\r\n/g, "\n").split("\n");
+    // A trailing newline terminates the last line; it is not an extra line.
+    if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
+    return lines.length;
   } catch {
     return 0;
   }

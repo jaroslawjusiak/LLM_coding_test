@@ -16,7 +16,9 @@
       "dotnetBuild": [
         {
           "project": "Upgrade.sln",
-          "expect": "fail"
+          "expect": "fail",
+          "minErrors": 1,
+          "errorPattern": "NU"
         }
       ]
     },

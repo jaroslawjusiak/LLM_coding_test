@@ -17,7 +17,9 @@
       "npm": [
         {
           "script": "build",
-          "expect": "fail"
+          "expect": "fail",
+          "minErrors": 3,
+          "errorPattern": "TS"
         }
       ]
     },

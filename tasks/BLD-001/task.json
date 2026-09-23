@@ -16,7 +16,9 @@
       "dotnetBuild": [
         {
           "project": "OneError.sln",
-          "expect": "fail"
+          "expect": "fail",
+          "minErrors": 1,
+          "errorPattern": "CS"
         }
       ]
     },

@@ -814,7 +814,7 @@ public class MatchHiddenTests
       initial: {
         dotnetTest: [
           { project: "Match.sln", expect: "pass" },
-          { project: "Match.sln", expect: "fail", includeHidden: true },
+          { project: "Match.sln", expect: "fail", includeHidden: true, minFailedTests: 1 },
         ],
       },
       final: {
@@ -960,7 +960,7 @@ describe("performance", () => {
       initial: {
         npm: [
           { script: "test", expect: "pass" },
-          { script: "test", expect: "fail", includeHidden: true },
+          { script: "test", expect: "fail", includeHidden: true, minFailedTests: 1 },
         ],
       },
       final: {

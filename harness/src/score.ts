@@ -4,6 +4,12 @@ import { diffTrees, isTestPath, matchGroups, type DiffSummary } from "./diff.ts"
 import { fileExists, readText, relFiles } from "./files.ts";
 import { defaultWeights, type LoadedTask, type ScoreWeights } from "./manifest.ts";
 
+export interface CheckLine {
+  name: string;
+  state: "pass" | "fail" | "skipped" | "unverified";
+  detail: string;
+}
+
 export interface ScoreReport {
   task: string;
   title: string;
@@ -14,6 +20,8 @@ export interface ScoreReport {
   filesChanged: number;
   linesAdded: number;
   linesRemoved: number;
+  /** Per file diff against the pristine workspace, so a line total is traceable. */
+  files: { path: string; status: string; added: number; removed: number }[];
   hiddenTests: string;
   unnecessaryChanges: number;
   unnecessaryFiles: string[];
@@ -21,6 +29,12 @@ export interface ScoreReport {
   regressionTestAdded: boolean | null;
   explanationCorrect: boolean | null;
   findingsMissed: string[];
+  /** Final checks with their state and the reason behind it. */
+  checks: CheckLine[];
+  /** Toolchains that were missing, so some checks never ran. */
+  environment: string[];
+  /** Scoring dimensions this task does not declare, excluded from maxScore. */
+  excluded: string[];
   score: number;
   maxScore: number;
   notes: string[];
@@ -36,7 +50,9 @@ export function scoreSubmission(
   elapsedMs: number,
 ): ScoreReport {
   const manifest = task.manifest;
-  const weights: ScoreWeights = effectiveWeights(task, { ...defaultWeights(manifest.category), ...manifest.scoring.weights });
+  const declared: ScoreWeights = { ...defaultWeights(manifest.category), ...manifest.scoring.weights };
+  const weights: ScoreWeights = effectiveWeights(task, declared);
+  const excluded = excludedDimensions(declared, weights);
   const diff = diffTrees(originalDir, submissionDir);
   const unnecessary = unnecessaryFiles(task, diff);
   const answerName = manifest.checks.final.answerFile ?? "ANSWER.md";
@@ -45,7 +61,11 @@ export function scoreSubmission(
   const groups = matchGroups(answer, manifest.checks.final.answerGroups);
   const rootPatterns = manifest.scoring.rootCausePatterns ?? [];
   const rootCauseIdentified = rootPatterns.length === 0 ? null : rootPatterns.every((pattern) => new RegExp(pattern, "i").test(answer));
-  const regressionTestAdded = manifest.scoring.requireRegressionTest ? hasRegressionTest(diff) : null;
+  const regressionTestAdded = manifest.scoring.requireRegressionTest
+    ? hasRegressionTest(diff, submissionDir, manifest.scoring.regressionTestPatterns)
+    : null;
+  // Checks no other dimension covers, such as a json parse or a required file.
+  const gateChecks = finalOutcomes.filter((item) => item.name.startsWith("json ") || item.name.startsWith("file "));
   const buildFinal = outcomeState(finalOutcomes, ["dotnet build", "npm build"]);
   const testsFinal = outcomeState(finalOutcomes.filter((item) => !item.name.includes("+hidden")), ["dotnet test", "npm test"]);
   const hidden = hiddenState(finalOutcomes);
@@ -58,9 +78,11 @@ export function scoreSubmission(
     score += Math.round(weight * fraction);
     notes.push(`${note}: ${Math.round(fraction * 100)}% of ${weight}`);
   };
-  add(weights.build, buildFinal === "FAIL" ? 0 : 1, "build");
-  add(weights.tests, testsFinal === "FAIL" ? 0 : 1, "tests");
-  add(weights.hidden, hidden === "FAIL" ? 0 : 1, "hidden");
+  // SKIP means the toolchain was absent, so no credit; it must not be read as a pass.
+  const credit = (state: string) => (state === "FAIL" || state === "SKIP" ? 0 : 1);
+  add(weights.build, credit(buildFinal), "build");
+  add(weights.tests, credit(testsFinal), "tests");
+  add(weights.hidden, credit(hidden), "hidden");
   if (weights.findings > 0) {
     const total = (manifest.checks.final.answerGroups ?? []).length || 1;
     const hit = total - groups.missed.length;
@@ -73,6 +95,10 @@ export function scoreSubmission(
     add(weights.precision, fraction, "precision");
   }
   if (weights.regressionTest > 0) add(weights.regressionTest, regressionTestAdded ? 1 : 0, "regression test");
+  if (weights.gates > 0) {
+    const passed = gateChecks.filter((item) => item.ok).length;
+    add(weights.gates, gateChecks.length === 0 ? 0 : passed / gateChecks.length, "gates");
+  }
   if (weights.unchanged > 0) {
     if (manifest.category === "refactor") {
       const gates = finalOutcomes.filter((item) => item.name.startsWith("nesting") || item.name.startsWith("lines"));
@@ -92,6 +118,7 @@ export function scoreSubmission(
     filesChanged: diff.filesChanged,
     linesAdded: diff.linesAdded,
     linesRemoved: diff.linesRemoved,
+    files: diff.files.map((file) => ({ path: file.path, status: file.status, added: file.added, removed: file.removed })),
     hiddenTests: hidden,
     unnecessaryChanges: unnecessary.length,
     unnecessaryFiles: unnecessary,
@@ -99,10 +126,60 @@ export function scoreSubmission(
     regressionTestAdded,
     explanationCorrect: answer.length === 0 && !(manifest.checks.final.answerGroups?.length) ? null : groups.missed.length === 0 && rootCauseIdentified !== false,
     findingsMissed: groups.missed,
+    checks: finalOutcomes.map((item) => ({
+      name: item.name,
+      state: item.skipped ? "skipped" : item.unverified ? "unverified" : item.ok ? "pass" : "fail",
+      detail: item.detail,
+    })),
+    environment: environmentProblems(initialOutcomes, finalOutcomes),
+    excluded,
     score,
     maxScore,
     notes,
   };
+}
+
+const DIMENSION_LABELS: Record<keyof ScoreWeights, string> = {
+  build: "build",
+  gates: "declared gates",
+  tests: "tests",
+  hidden: "hidden tests",
+  findings: "findings",
+  rootCause: "root cause",
+  precision: "precision",
+  regressionTest: "regression test",
+  unchanged: "unchanged workspace",
+};
+
+/** Dimensions the task never declared, so maxScore is below 100 by design. */
+function excludedDimensions(declared: ScoreWeights, effective: ScoreWeights): string[] {
+  return (Object.keys(DIMENSION_LABELS) as (keyof ScoreWeights)[])
+    .filter((key) => declared[key] > 0 && effective[key] === 0)
+    .map((key) => DIMENSION_LABELS[key]);
+}
+
+/** What a task can score before anything runs, so a max score below 100 explains itself. */
+export function weightsFor(task: LoadedTask): { weights: ScoreWeights; maxScore: number; excluded: string[] } {
+  const declared: ScoreWeights = { ...defaultWeights(task.manifest.category), ...task.manifest.scoring.weights };
+  const weights = effectiveWeights(task, declared);
+  return {
+    weights,
+    maxScore: Object.values(weights).reduce((sum, weight) => sum + weight, 0),
+    excluded: excludedDimensions(declared, weights),
+  };
+}
+
+/** Toolchain problems, reported as `tool reason (N checks could not run)`. */
+function environmentProblems(...sets: CheckOutcome[][]): string[] {
+  const counts = new Map<string, number>();
+  for (const outcomes of sets) {
+    for (const outcome of outcomes) {
+      if (!outcome.skipped || !outcome.tool) continue;
+      const key = `${outcome.tool} ${outcome.skipReason ?? "was unavailable"}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()].map(([problem, count]) => `${problem} (${count} check${count === 1 ? "" : "s"} could not run)`);
 }
 
 function effectiveWeights(task: LoadedTask, weights: ScoreWeights): ScoreWeights {
@@ -112,12 +189,14 @@ function effectiveWeights(task: LoadedTask, weights: ScoreWeights): ScoreWeights
   const hasBuild = (final.dotnetBuild?.length ?? 0) > 0 || (final.npm ?? []).some((item) => item.script === "build");
   const hasTests = (final.dotnetTest?.length ?? 0) > 0 || (final.npm ?? []).some((item) => item.script === "test");
   const hasHidden = (final.dotnetTest ?? []).some((item) => item.includeHidden) || (final.npm ?? []).some((item) => item.includeHidden);
+  const hasGates = final.json !== undefined || (final.requireFile?.length ?? 0) > 0;
   if (!hasBuild) next.build = 0;
   if (!hasTests) next.tests = 0;
   if (!hasHidden) next.hidden = 0;
   if (!(final.answerGroups?.length)) next.findings = 0;
   if (!(scoring.rootCausePatterns?.length)) next.rootCause = 0;
   if ((scoring.precisionMode ?? "none") === "none") next.precision = 0;
+  if (!hasGates) next.gates = 0;
   if (!scoring.requireRegressionTest) next.regressionTest = 0;
   else if (next.regressionTest === 0) next.regressionTest = 10;
   if (task.manifest.category === "refactor") {
@@ -153,28 +232,47 @@ function unnecessaryFiles(task: LoadedTask, diff: DiffSummary): string[] {
   });
 }
 
-function hasRegressionTest(diff: DiffSummary): boolean {
-  return diff.files.some((file) => file.status !== "removed" && /test/i.test(file.path) && /regress|duplicate/i.test(file.path));
+/**
+ * A regression test is recognised by what it says, not by what its file is called.
+ * With patterns declared, any changed test file whose content matches one of them
+ * counts; without them the path heuristic is all there is to go on.
+ */
+export function hasRegressionTest(diff: DiffSummary, submissionDir: string, patterns?: string[]): boolean {
+  const changedTests = diff.files.filter((file) => file.status !== "removed" && isTestPath(file.path));
+  if (changedTests.length === 0) return false;
+  if (patterns?.length) {
+    return changedTests.some((file) => {
+      const full = path.join(submissionDir, file.path);
+      if (!fileExists(full)) return false;
+      const content = readText(full);
+      return patterns.some((pattern) => new RegExp(pattern, "i").test(content));
+    });
+  }
+  return changedTests.some((file) => /regress|duplicate/i.test(file.path));
 }
 
 function outcomeState(outcomes: CheckOutcome[], needles: string[]): string {
   const relevant = outcomes.filter((item) => needles.some((needle) => item.name.includes(needle)) && !item.name.includes("+hidden"));
   if (relevant.length === 0) return "N/A";
+  if (relevant.every((item) => item.skipped)) return "SKIP";
   return relevant.every((item) => item.ok) ? "PASS" : "FAIL";
 }
 
 function hiddenState(outcomes: CheckOutcome[]): string {
   const tests = outcomes.filter((item) => item.name.includes("+hidden"));
   if (tests.length === 0) return "N/A";
+  if (tests.every((item) => item.skipped)) return "SKIP";
   return tests.every((item) => item.ok) ? "PASS" : "FAIL";
 }
 
 function testFraction(outcomes: CheckOutcome[]): string {
   const tests = outcomes.filter((item) => item.name.includes("dotnet test") || item.name.includes("npm test"));
   if (tests.length === 0) return "N/A";
+  if (tests.every((item) => item.skipped)) return "SKIP";
+  const unverified = tests.some((item) => item.unverified);
   const passed = tests.reduce((sum, item) => sum + (item.passedTests ?? 0), 0);
   const total = tests.reduce((sum, item) => sum + (item.totalTests ?? 0), 0);
-  if (!total) return tests.every((item) => item.ok) ? "PASS" : "FAIL";
+  if (!total) return tests.every((item) => item.ok) ? (unverified ? "PASS (unverified)" : "PASS") : "FAIL";
   return `${passed}/${total}`;
 }
 
@@ -185,9 +283,17 @@ function formatDuration(ms: number): string {
 
 export function renderReport(report: ScoreReport): string {
   const yn = (value: boolean | null) => (value === null ? "N/A" : value ? "YES" : "NO");
-  return [
-    "# Benchmark report",
-    "",
+  const lines = ["# Benchmark report", ""];
+  if (report.environment.length > 0) {
+    lines.push(
+      "!! ENVIRONMENT PROBLEM - THIS SCORE IS NOT A MEASUREMENT OF THE MODEL",
+      ...report.environment.map((item) => `   ${item}`),
+      "   Checks that could not run are reported as SKIP and earn no points.",
+      "   Fix the machine, then score again before drawing conclusions.",
+      "",
+    );
+  }
+  lines.push(
     `Task: ${report.task}`,
     `Title: ${report.title}`,
     `Model: ${report.model}`,
@@ -201,9 +307,19 @@ export function renderReport(report: ScoreReport): string {
     `  Initial: ${report.tests.initial}`,
     `  Final: ${report.tests.final}`,
     "",
+    "  Initial states report whether the starting workspace matched what the task",
+    "  declares (a task that starts red should be red). They are not passing tests.",
+    "  SKIP means the toolchain could not run the check; WARN means it reported",
+    "  success in a form this harness could not count. Neither is a failure of the code.",
+    "",
     `Files changed: ${report.filesChanged}`,
     `Lines added: ${report.linesAdded}`,
     `Lines removed: ${report.linesRemoved}`,
+    "",
+    "Changed files (diff against the untouched workspace, answer files included):",
+    ...(report.files.length > 0
+      ? report.files.map((file) => `  ${file.status}\t+${file.added}/-${file.removed}\t${file.path}`)
+      : ["  none"]),
     "",
     "Hidden tests:",
     `  ${report.hiddenTests}`,
@@ -221,7 +337,23 @@ export function renderReport(report: ScoreReport): string {
     "Final explanation:",
     `  ${report.explanationCorrect === null ? "N/A" : report.explanationCorrect ? "Correct" : "Incomplete"}`,
     "",
-    `Score: ${report.score}/${report.maxScore || 100}`,
+    "Checks:",
+    ...(report.checks.length > 0 ? report.checks.flatMap(renderCheck) : ["  none declared"]),
     "",
-  ].join("\n");
+    `Score: ${report.score}/${report.maxScore || 100}`,
+    ...report.notes.map((note) => `  ${note}`),
+    ...(report.excluded.length > 0
+      ? [`  not scored (task does not declare them): ${report.excluded.join(", ")}`]
+      : []),
+    "",
+  );
+  return lines.join("\n");
+}
+
+function renderCheck(check: CheckLine): string[] {
+  const state = { pass: "ok  ", skipped: "SKIP", unverified: "WARN", fail: "FAIL" }[check.state];
+  const out = [`  ${state} ${check.name}`];
+  if (check.state === "pass") return out;
+  const detail = check.detail.trim().split(/\r?\n/).slice(0, 8).filter((line) => line.trim().length > 0);
+  return [...out, ...detail.map((line) => `       ${line}`)];
 }

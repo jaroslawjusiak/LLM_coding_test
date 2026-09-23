@@ -55,7 +55,7 @@ public class CustomerTests
     rootCause: "The repository names a type that was never declared.",
     correctFix: "Use Customer.",
     checks: {
-      initial: { dotnetBuild: [{ project: "OneError.sln", expect: "fail" }] },
+      initial: { dotnetBuild: [{ project: "OneError.sln", expect: "fail", minErrors: 1, errorPattern: "CS" }] },
       final: {
         dotnetBuild: [{ project: "OneError.sln", expect: "pass" }],
         dotnetTest: [{ project: "OneError.sln", expect: "pass" }],
@@ -202,7 +202,7 @@ public partial class UserMapper
     rootCause: "Api lacks a project reference; EmailSender's namespace does not match its callers; UserMapper.Address.cs is absent.",
     correctFix: "Add the project reference, move the namespace, and restore the partial.",
     checks: {
-      initial: { dotnetBuild: [{ project: "ThreeErrors.sln", expect: "fail" }] },
+      initial: { dotnetBuild: [{ project: "ThreeErrors.sln", expect: "fail", minErrors: 3, errorPattern: "CS" }] },
       final: {
         dotnetBuild: [{ project: "ThreeErrors.sln", expect: "pass" }],
         dotnetTest: [{ project: "ThreeErrors.sln", expect: "pass" }],
@@ -270,7 +270,7 @@ public class AuditJsonTests
     rootCause: "Newtonsoft.Json 99.0.0 does not exist, and 13.0.1 is too low for the ASP.NET Core 8 Newtonsoft integration package.",
     correctFix: "Reference Newtonsoft.Json 13.0.3 and leave the call site on JsonConvert.",
     checks: {
-      initial: { dotnetBuild: [{ project: "Deps.sln", expect: "fail" }] },
+      initial: { dotnetBuild: [{ project: "Deps.sln", expect: "fail", minErrors: 1, errorPattern: "NU" }] },
       final: {
         dotnetBuild: [{ project: "Deps.sln", expect: "pass" }],
         dotnetTest: [{ project: "Deps.sln", expect: "pass" }],
@@ -382,7 +382,7 @@ public class MeterTests
     rootCause: "Newtonsoft.Json 99.0.0 plus application code that was not moved to the documented v2 API.",
     correctFix: "Reference Newtonsoft.Json 13.0.3 and adapt call sites using docs/widgetkit-v2.md. Do not edit libs/WidgetKit.",
     checks: {
-      initial: { dotnetBuild: [{ project: "Upgrade.sln", expect: "fail" }] },
+      initial: { dotnetBuild: [{ project: "Upgrade.sln", expect: "fail", minErrors: 1, errorPattern: "NU" }] },
       final: {
         dotnetBuild: [{ project: "Upgrade.sln", expect: "pass" }],
         dotnetTest: [{ project: "Upgrade.sln", expect: "pass" }],
