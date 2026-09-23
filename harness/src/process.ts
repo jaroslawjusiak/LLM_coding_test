@@ -12,6 +12,8 @@ export function runProcess(command: string, args: string[], cwd: string, timeout
       cwd,
       env: { ...process.env, ...extraEnv },
       stdio: ["ignore", "pipe", "pipe"],
+      // Node refuses to spawn .cmd/.bat files on Windows without a shell (CVE-2024-27980).
+      shell: process.platform === "win32" && /\.(cmd|bat)$/i.test(command),
     });
     let output = "";
     const append = (chunk: Buffer) => {
