@@ -37,6 +37,13 @@ export async function verifyTask(task: LoadedTask, options: VerifyOptions = {}):
     copyTree(workspace, initialDir);
     copyTree(workspace, finalDir);
     const initial = await runCheckSet(initialDir, manifest.checks.initial, { hiddenDir: hidden, manifest, originalWorkspace: workspace });
+    const skipped = initial.filter((outcome) => outcome.skipped);
+    if (skipped.length > 0) {
+      const tools = [...new Set(skipped.map((outcome) => outcome.tool))].join(", ");
+      const message = `${manifest.id}: ${tools} is not on PATH, ${skipped.length} check(s) could not run`;
+      if (options.allowMissingDotnet) return { ok: true, log: `SKIP ${message}` };
+      return { ok: false, log: `FAIL ${message}` };
+    }
     for (const outcome of initial) {
       lines.push(`${outcome.ok ? "ok" : "FAIL"} initial ${outcome.name}`);
       if (!outcome.ok) lines.push(outcome.detail);

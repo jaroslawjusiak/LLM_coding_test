@@ -118,6 +118,7 @@ if (command === "score") {
   });
   const report = scoreSubmission(task, original, workspace, final, initial, values.model ?? "unspecified", Date.now() - started);
   const markdown = renderReport(report);
+  if (report.environment.length > 0) console.error(`WARNING: ${report.environment.join("; ")}`);
   console.log(markdown);
   if (values.report) {
     writeText(values.report, JSON.stringify(report, null, 2) + "\n");
@@ -146,6 +147,7 @@ if (command === "run") {
     originalWorkspace: original,
   });
   const report = scoreSubmission(task, original, workspace, final, [], values.model, Date.now() - started);
+  if (report.environment.length > 0) console.error(`WARNING: ${report.environment.join("; ")}`);
   console.log(renderReport(report));
   writeText(path.join(values.out, "report.json"), JSON.stringify(report, null, 2) + "\n");
   writeText(path.join(values.out, "report.md"), renderReport(report));

@@ -53,21 +53,28 @@ node harness/src/cli.ts verify
 1. The untouched workspace matches the declared initial result. A bug task's visible tests fail, or pass when the prompt says the happy path is green. A syntax task does not build.
 2. Applying `gold/` produces the declared final result, including hidden tests, and the gold submission scores full marks on the checks that task declares.
 
-`verify --allow-missing-dotnet` skips tasks that need `dotnet`. It does not pretend those tasks passed a compile.
+`verify --allow-missing-dotnet` skips tasks whose toolchain is missing, `dotnet` for C# and `npm` for React. It does not pretend those tasks passed a compile.
 
 ## What a report contains
 
 - build, initial and final
 - tests, initial and final
-- files changed, lines added, lines removed
+- files changed, lines added, lines removed, with a per file breakdown
 - hidden tests
 - unnecessary changes
 - root cause identified
 - regression test added
 - final explanation
-- score
+- every check that ran, with the reason behind a failure or a skip
+- score, with the weight each dimension contributed and the dimensions the task does not declare
 
-Dimensions that a task does not declare are left out of the score, so a gold patch is not penalized for a check the task never asked for. Analysis tasks score the written findings and whether the code was left unchanged. Refactor tasks keep behavior tests and hidden boundaries green, and they must reduce nesting or file length. Performance tasks use counters, not timers.
+`Initial` states answer "did the untouched workspace match what the task declares", not "did the tests pass". A task that must start red reports `PASS` for its initial state when it is red.
+
+Line counts are a diff against the untouched workspace, so the `ANSWER.md` a prompt asks for is counted as added lines. The per file breakdown names every file behind the total.
+
+A check that could not run because its toolchain is absent is reported as `SKIP`, never as a pass. `SKIP` earns no points, the report opens with an environment warning, and `score` repeats it on stderr, because a score measured without `dotnet` or `npm` is not comparable to one measured with them. `run` stops instead of asking the model to fix a machine.
+
+Dimensions that a task does not declare are left out of the score, so a gold patch is not penalized for a check the task never asked for. That is why a syntax task can score 15/35: only the dimensions the task declares are in `maxScore`. Analysis tasks score the written findings and whether the code was left unchanged. Refactor tasks keep behavior tests and hidden boundaries green, and they must reduce nesting or file length. Performance tasks use counters, not timers.
 
 ## Catalog
 

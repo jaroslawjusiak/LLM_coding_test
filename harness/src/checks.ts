@@ -10,10 +10,24 @@ export interface CheckOutcome {
   name: string;
   ok: boolean;
   detail: string;
+  /** True when the toolchain this check needs is not installed, so it never ran. */
+  skipped?: boolean;
+  /** The missing tool, when skipped is true. */
+  tool?: string;
   passedTests?: number;
   failedTests?: number;
   totalTests?: number;
   errorCount?: number;
+}
+
+function missingTool(tool: string, name: string): CheckOutcome {
+  return {
+    name,
+    ok: false,
+    skipped: true,
+    tool,
+    detail: `${tool} is not on PATH, so this check never ran. An "expect: fail" check that is satisfied only by a missing toolchain is not evidence about the submission.`,
+  };
 }
 
 export interface CheckContext {
@@ -106,13 +120,15 @@ function checkLines(workspace: string, file: string, compare: "lte" | "gte", lin
 }
 
 async function runDotnetBuild(workspace: string, check: DotnetCheck): Promise<CheckOutcome> {
+  const name = `dotnet build ${check.project} ${check.expect}`;
   const result = await runProcess("dotnet", ["build", check.project, "-v", "q", "--nologo"], workspace, 240_000, DOTNET_ENV);
+  if (result.missing) return missingTool("dotnet", name);
   const errors = countBuildErrors(result.output);
   const built = result.code === 0 && !result.timedOut;
   let ok = check.expect === "pass" ? built : !built;
   if (check.expect === "fail" && check.minErrors && errors < check.minErrors) ok = false;
   return {
-    name: `dotnet build ${check.project} ${check.expect}`,
+    name,
     ok,
     errorCount: errors,
     detail: result.timedOut ? "timed out" : `${built ? "built" : "failed"} with ${errors} errors\n${tail(result.output, 30)}`,
@@ -123,12 +139,14 @@ async function runDotnetTest(workspace: string, check: DotnetCheck, context: Che
   if (check.includeHidden && context.hiddenDir && context.manifest) {
     copyHidden(context.hiddenDir, workspace, context.manifest.hiddenCopy);
   }
+  const name = `dotnet test ${check.project} ${check.expect}${check.includeHidden ? " +hidden" : ""}`;
   const result = await runProcess("dotnet", ["test", check.project, "-v", "q", "--nologo"], workspace, 300_000, DOTNET_ENV);
+  if (result.missing) return missingTool("dotnet", name);
   const counts = parseDotnetTest(result.output);
   const passed = result.code === 0 && !result.timedOut && (counts.failedTests ?? 0) === 0 && (counts.totalTests ?? 0) > 0;
   const ok = check.expect === "pass" ? passed : !passed;
   return {
-    name: `dotnet test ${check.project} ${check.expect}${check.includeHidden ? " +hidden" : ""}`,
+    name,
     ok,
     ...counts,
     detail: result.timedOut ? "timed out" : `${counts.passedTests ?? 0}/${counts.totalTests ?? 0} passed\n${tail(result.output, 30)}`,
@@ -140,24 +158,34 @@ const installed = new Set<string>();
 async function runNpm(workspace: string, script: "build" | "test", expect: "pass" | "fail", cwd: string | undefined, context: CheckContext, includeHidden?: boolean): Promise<CheckOutcome> {
   if (includeHidden && context.hiddenDir && context.manifest) copyHidden(context.hiddenDir, workspace, context.manifest.hiddenCopy);
   const dir = cwd ? path.join(workspace, cwd) : workspace;
+  const name = `npm ${script} ${expect}${includeHidden ? " +hidden" : ""}`;
+  const npm = npmCommand();
   if (!installed.has(dir)) {
     const lock = existsSync(path.join(dir, "package-lock.json"));
-    const install = await runProcess(npmCommand(), [lock ? "ci" : "install", "--no-fund", "--no-audit"], dir, 240_000, NPM_ENV);
+    const install = await runProcess(npm, [lock ? "ci" : "install", "--no-fund", "--no-audit"], dir, 240_000, NPM_ENV);
+    if (toolchainMissing(install)) return missingTool("npm", name);
     if (install.code !== 0) {
-      return { name: `npm ${script} ${expect}`, ok: false, detail: `npm install failed\n${tail(install.output, 40)}` };
+      return { name, ok: false, detail: `npm install failed\n${tail(install.output, 40)}` };
     }
     installed.add(dir);
   }
-  const result = await runProcess(npmCommand(), ["run", script], dir, 240_000, NPM_ENV);
+  const result = await runProcess(npm, ["run", script], dir, 240_000, NPM_ENV);
+  if (toolchainMissing(result)) return missingTool("npm", name);
   const counts = parseVitest(result.output);
   const passed = result.code === 0 && !result.timedOut;
   const ok = expect === "pass" ? passed : !passed;
   return {
-name: `npm ${script} ${expect}${includeHidden ? " +hidden" : ""}`,
+    name,
     ok,
     ...counts,
     detail: result.timedOut ? "timed out" : `exit ${result.code}\n${tail(result.output, 30)}`,
   };
+}
+
+/** A tool is absent when spawn fails, or when a Windows shell wrapper reports 127. */
+export function toolchainMissing(result: { code: number; output: string; missing?: boolean }): boolean {
+  if (result.missing) return true;
+  return result.code === 127 && /is not recognized as an internal or external command|command not found/i.test(result.output);
 }
 
 export function countBuildErrors(output: string): number {

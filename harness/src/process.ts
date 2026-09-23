@@ -4,6 +4,8 @@ export interface ProcessResult {
   code: number;
   output: string;
   timedOut: boolean;
+  /** True when the executable itself could not be spawned (not on PATH). */
+  missing?: boolean;
 }
 
 export function runProcess(command: string, args: string[], cwd: string, timeoutMs = 180_000, extraEnv: Record<string, string> = {}): Promise<ProcessResult> {
@@ -29,7 +31,8 @@ export function runProcess(command: string, args: string[], cwd: string, timeout
     }, timeoutMs);
     child.on("error", (error) => {
       clearTimeout(timer);
-      resolve({ code: 127, output: output + `\n${error.message}`, timedOut });
+      const missing = (error as NodeJS.ErrnoException).code === "ENOENT";
+      resolve({ code: 127, output: output + `\n${error.message}`, timedOut, missing });
     });
     child.on("close", (code) => {
       clearTimeout(timer);

@@ -58,6 +58,10 @@ export async function runModel(task: LoadedTask, options: RunModelOptions): Prom
     });
     const failed = outcomes.filter((item) => !item.ok);
     if (failed.length === 0 || turn === options.maxTurns) break;
+    if (failed.every((item) => item.skipped)) {
+      const tools = [...new Set(failed.map((item) => item.tool).filter(Boolean))].join(", ");
+      throw new Error(`Cannot grade ${task.manifest.id}: ${tools} is not on PATH. Install it and run again.`);
+    }
     messages.push({ role: "assistant", content: last });
     messages.push({
       role: "user",
