@@ -100,7 +100,7 @@ public class ExistingTests : IClassFixture<WebApplicationFactory<Program>>
       initial: {
         dotnetTest: [
           { project: "Deactivate.sln", expect: "pass" },
-          { project: "Deactivate.sln", expect: "fail", includeHidden: true },
+          { project: "Deactivate.sln", expect: "fail", includeHidden: true, minFailedTests: 1 },
         ],
       },
       final: {
@@ -340,7 +340,7 @@ describe("orders client", () => {
     rootCause: "The client still uses an older header and payload shape.",
     correctFix: "Send Authorization: Bearer and { customerId, items }.",
     checks: {
-      initial: { npm: [{ script: "test", expect: "fail" }] },
+      initial: { npm: [{ script: "test", expect: "fail", minFailedTests: 1 }] },
       final: { npm: [{ script: "build", expect: "pass" }, { script: "test", expect: "pass" }] },
     },
     scoring: { precisionMode: "touch-list", maxUnnecessaryFiles: 0 },
@@ -496,7 +496,7 @@ public class UserTests
       initial: {
         dotnetTest: [
           { project: "Phones.sln", expect: "pass" },
-          { project: "Phones.sln", expect: "fail", includeHidden: true },
+          { project: "Phones.sln", expect: "fail", includeHidden: true, minFailedTests: 1 },
         ],
       },
       final: {

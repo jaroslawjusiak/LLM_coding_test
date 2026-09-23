@@ -16,7 +16,9 @@
       "dotnetBuild": [
         {
           "project": "SyntaxRepair.sln",
-          "expect": "fail"
+          "expect": "fail",
+          "minErrors": 6,
+          "errorPattern": "CS"
         }
       ]
     },

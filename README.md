@@ -85,9 +85,19 @@ A check that could not run is reported as `SKIP`, never as a pass. `SKIP` earns 
 
 A run the tool reported as successful but whose summary this harness could not count is `WARN`, and it keeps its points. `DOTNET_CLI_UI_LANGUAGE` is pinned to `en` for that reason: a localized CLI prints `Zaliczono: 5` instead of `Passed: 5`, which the parser reads as zero tests, which used to turn a passing submission into a failed check.
 
-A build check can require evidence with `minErrors`, and restrict that count to one family of error codes with `errorPattern`, so `"minErrors": 2, "errorPattern": "CS"` proves the build was red because of compiler errors rather than because a package did not restore.
+A red baseline has to prove why it is red, or any collapse of the run counts as the expected defect:
 
-Dimensions that a task does not declare are left out of the score, so a gold patch is not penalized for a check the task never asked for. That is why a syntax task can score 15/35: only the dimensions the task declares are in `maxScore`. Analysis tasks score the written findings and whether the code was left unchanged. Refactor tasks keep behavior tests and hidden boundaries green, and they must reduce nesting or file length. Performance tasks use counters, not timers.
+- `minErrors` with `errorPattern` restricts the count to one family of error codes, so `"minErrors": 1, "errorPattern": "NU"` says BLD-003 is red because a package does not restore, and `"minErrors": 3, "errorPattern": "CS"` says BLD-002 is red because of three compiler errors.
+- `minFailedTests` requires that many failed tests, so a baseline that never reached the test runner does not pass for being red.
+
+Every `expect: "fail"` baseline in the catalog now declares one of the two, except BLD-005 and SYN-003, whose existing `minErrors` values were tuned against real compiler output and are left alone rather than guessed at.
+
+Dimensions that a task does not declare are left out of the score, so a gold patch is not penalized for a check the task never asked for. That is why a syntax task can score 25/45 on a machine without the SDK: only the dimensions the task declares are in `maxScore`.
+
+Two dimensions deserve a note:
+
+- `gates` covers checks no other dimension reaches, such as SYN-001's `json` parse and BUG-004's required file. It is 0 by default and a task opts in with `scoring.weights.gates`, so a declared check is never free.
+- `regressionTest` is awarded for what a changed test file says, not for what it is called. `scoring.regressionTestPatterns` are matched against the content of changed test files; without them the only evidence is a filename containing `regress` or `duplicate`. Analysis tasks score the written findings and whether the code was left unchanged. Refactor tasks keep behavior tests and hidden boundaries green, and they must reduce nesting or file length. Performance tasks use counters, not timers.
 
 ## Catalog
 
@@ -108,7 +118,7 @@ Dimensions that a task does not declare are left out of the score, so a gold pat
 | BUG-001 | Symptom versus root cause in the user cache | 2 | C# | Visible test shows the null email. Hidden tests lock id 7 and a second read with one database read. |
 | BUG-002 | React role check and delivery-time bugs | 2 | React | `"SuperAdmin"` is always truthy, and the clock adds an hour. |
 | BUG-003 | Docker environment mismatch | 2 | C# | Compose sets `ConnectionStrings__Database`; the app reads `ConnectionStrings:Orders`. A hash locks `AppConfig.cs`. |
-| BUG-004 | Regression: duplicate emails | 4 | C# | Visible tests stay green. Hidden tests require enqueue-only dispatch and a regression test. |
+| BUG-004 | Regression: duplicate emails | 4 | C# | Visible tests stay green. Hidden tests require enqueue-only dispatch, and the prompt names the regression test file that `requireFile` locks. |
 | BUG-005 | Surgical fix for unknown-user HTTP 500 | 2 | C# | The action dereferences a missing user. Touch only `UsersController.cs` and return 404. |
 | SPEC-001 | Notification spec versus implementation | 3 | C# | Do not edit code. Report SMS, retry, duplicates, attempt recording, unsubscribe, and synchronous send. |
 | SPEC-002 | Test-driven payment service | 1 | C# | Implement charge, cancel, retry, and dedupe. Hidden cases cover null, zero, duplicate id, and a large decimal. |

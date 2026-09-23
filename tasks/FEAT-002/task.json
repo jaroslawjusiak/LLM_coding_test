@@ -17,7 +17,8 @@
       "npm": [
         {
           "script": "test",
-          "expect": "fail"
+          "expect": "fail",
+          "minFailedTests": 1
         }
       ]
     },

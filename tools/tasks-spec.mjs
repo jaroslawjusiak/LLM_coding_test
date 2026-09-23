@@ -182,7 +182,7 @@ Visible tests cover a normal charge, a cancelled order, and three retries. Hidde
     correctFix: "Implement the gateway loop, cancellation skip, and idempotent ledger.",
     hiddenCopy: [{ from: "PaymentHiddenTests.cs", to: "tests/Payments.Tests/PaymentHiddenTests.cs" }],
     checks: {
-      initial: { dotnetTest: [{ project: "Payments.sln", expect: "fail" }] },
+      initial: { dotnetTest: [{ project: "Payments.sln", expect: "fail", minFailedTests: 1 }] },
       final: {
         dotnetTest: [
           { project: "Payments.sln", expect: "pass" },
@@ -775,7 +775,7 @@ public class EmptyCartHiddenTests : IClassFixture<WebApplicationFactory<Program>
       initial: {
         dotnetTest: [
           { project: "Cart.sln", expect: "pass" },
-          { project: "Cart.sln", expect: "fail", includeHidden: true },
+          { project: "Cart.sln", expect: "fail", includeHidden: true, minFailedTests: 1 },
         ],
       },
       final: {

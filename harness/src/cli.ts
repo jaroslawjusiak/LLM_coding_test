@@ -69,7 +69,7 @@ if (command === "list") {
 
 if (command === "weights") {
   const tasks = loadTasks(repoRoot, values.task);
-  const columns = ["build", "tests", "hidden", "findings", "rootCause", "precision", "regressionTest", "unchanged"] as const;
+  const columns = ["build", "gates", "tests", "hidden", "findings", "rootCause", "precision", "regressionTest", "unchanged"] as const;
   if (values.markdown) {
     console.log(`| ID | Category | ${columns.join(" | ")} | Max | Not scored |`);
     console.log(`| --- | --- | ${columns.map(() => "---").join(" | ")} | --- | --- |`);

@@ -27,7 +27,8 @@
         {
           "project": "Phones.sln",
           "expect": "fail",
-          "includeHidden": true
+          "includeHidden": true,
+          "minFailedTests": 1
         }
       ]
     },

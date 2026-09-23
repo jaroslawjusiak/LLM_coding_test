@@ -9,6 +9,8 @@ export interface DotnetCheck {
   minErrors?: number;
   /** Restrict minErrors to errors whose code starts with this prefix, such as "CS". */
   errorPattern?: string;
+  /** With expect "fail", require this many failed tests, so the run proves tests executed. */
+  minFailedTests?: number;
   includeHidden?: boolean;
 }
 
@@ -16,6 +18,8 @@ export interface NpmCheck {
   script: "build" | "test";
   expect: Expectation;
   cwd?: string;
+  /** With expect "fail", require this many failed tests, so the run proves tests executed. */
+  minFailedTests?: number;
   includeHidden?: boolean;
 }
 
@@ -62,12 +66,15 @@ export interface ScoringRules {
   allowNewTests?: boolean;
   rootCausePatterns?: string[];
   requireRegressionTest?: boolean;
+  /** Matched against changed test files, so a regression test is recognised by what it says. */
+  regressionTestPatterns?: string[];
   weights?: Partial<ScoreWeights>;
   minGoldScore?: number;
 }
 
 export interface ScoreWeights {
   build: number;
+  gates: number;
   tests: number;
   hidden: number;
   findings: number;

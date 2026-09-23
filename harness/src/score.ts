@@ -61,7 +61,11 @@ export function scoreSubmission(
   const groups = matchGroups(answer, manifest.checks.final.answerGroups);
   const rootPatterns = manifest.scoring.rootCausePatterns ?? [];
   const rootCauseIdentified = rootPatterns.length === 0 ? null : rootPatterns.every((pattern) => new RegExp(pattern, "i").test(answer));
-  const regressionTestAdded = manifest.scoring.requireRegressionTest ? hasRegressionTest(diff) : null;
+  const regressionTestAdded = manifest.scoring.requireRegressionTest
+    ? hasRegressionTest(diff, submissionDir, manifest.scoring.regressionTestPatterns)
+    : null;
+  // Checks no other dimension covers, such as a json parse or a required file.
+  const gateChecks = finalOutcomes.filter((item) => item.name.startsWith("json ") || item.name.startsWith("file "));
   const buildFinal = outcomeState(finalOutcomes, ["dotnet build", "npm build"]);
   const testsFinal = outcomeState(finalOutcomes.filter((item) => !item.name.includes("+hidden")), ["dotnet test", "npm test"]);
   const hidden = hiddenState(finalOutcomes);
@@ -91,6 +95,10 @@ export function scoreSubmission(
     add(weights.precision, fraction, "precision");
   }
   if (weights.regressionTest > 0) add(weights.regressionTest, regressionTestAdded ? 1 : 0, "regression test");
+  if (weights.gates > 0) {
+    const passed = gateChecks.filter((item) => item.ok).length;
+    add(weights.gates, gateChecks.length === 0 ? 0 : passed / gateChecks.length, "gates");
+  }
   if (weights.unchanged > 0) {
     if (manifest.category === "refactor") {
       const gates = finalOutcomes.filter((item) => item.name.startsWith("nesting") || item.name.startsWith("lines"));
@@ -133,6 +141,7 @@ export function scoreSubmission(
 
 const DIMENSION_LABELS: Record<keyof ScoreWeights, string> = {
   build: "build",
+  gates: "declared gates",
   tests: "tests",
   hidden: "hidden tests",
   findings: "findings",
@@ -180,12 +189,14 @@ function effectiveWeights(task: LoadedTask, weights: ScoreWeights): ScoreWeights
   const hasBuild = (final.dotnetBuild?.length ?? 0) > 0 || (final.npm ?? []).some((item) => item.script === "build");
   const hasTests = (final.dotnetTest?.length ?? 0) > 0 || (final.npm ?? []).some((item) => item.script === "test");
   const hasHidden = (final.dotnetTest ?? []).some((item) => item.includeHidden) || (final.npm ?? []).some((item) => item.includeHidden);
+  const hasGates = final.json !== undefined || (final.requireFile?.length ?? 0) > 0;
   if (!hasBuild) next.build = 0;
   if (!hasTests) next.tests = 0;
   if (!hasHidden) next.hidden = 0;
   if (!(final.answerGroups?.length)) next.findings = 0;
   if (!(scoring.rootCausePatterns?.length)) next.rootCause = 0;
   if ((scoring.precisionMode ?? "none") === "none") next.precision = 0;
+  if (!hasGates) next.gates = 0;
   if (!scoring.requireRegressionTest) next.regressionTest = 0;
   else if (next.regressionTest === 0) next.regressionTest = 10;
   if (task.manifest.category === "refactor") {
@@ -221,8 +232,23 @@ function unnecessaryFiles(task: LoadedTask, diff: DiffSummary): string[] {
   });
 }
 
-function hasRegressionTest(diff: DiffSummary): boolean {
-  return diff.files.some((file) => file.status !== "removed" && /test/i.test(file.path) && /regress|duplicate/i.test(file.path));
+/**
+ * A regression test is recognised by what it says, not by what its file is called.
+ * With patterns declared, any changed test file whose content matches one of them
+ * counts; without them the path heuristic is all there is to go on.
+ */
+export function hasRegressionTest(diff: DiffSummary, submissionDir: string, patterns?: string[]): boolean {
+  const changedTests = diff.files.filter((file) => file.status !== "removed" && isTestPath(file.path));
+  if (changedTests.length === 0) return false;
+  if (patterns?.length) {
+    return changedTests.some((file) => {
+      const full = path.join(submissionDir, file.path);
+      if (!fileExists(full)) return false;
+      const content = readText(full);
+      return patterns.some((pattern) => new RegExp(pattern, "i").test(content));
+    });
+  }
+  return changedTests.some((file) => /regress|duplicate/i.test(file.path));
 }
 
 function outcomeState(outcomes: CheckOutcome[], needles: string[]): string {

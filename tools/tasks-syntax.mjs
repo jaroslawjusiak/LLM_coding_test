@@ -21,7 +21,7 @@ Run \`dotnet test\`.`,
     id,
     `# SYN-001
 
-Level 1 syntax repair. The only defect is a missing closing brace on the root object. Adding or renaming properties is a semantic change and should fail the property-count test.`,
+Level 1 syntax repair. The only defect is a missing closing brace on the root object. Adding or renaming properties is a semantic change and should fail the property-count test. The red baseline requires one failed test, so a run that never reached the tests does not count as the expected defect. The json check is scored through the gates weight, because no other dimension covers whether the document parses.`,
   );
   add(
     `tasks/${id}/workspace/appsettings.json`,
@@ -96,14 +96,14 @@ public class ConfigTests
     checks: {
       initial: {
         json: { files: ["appsettings.json"], expect: "fail" },
-        dotnetTest: [{ project: "JsonRepair.sln", expect: "fail" }],
+        dotnetTest: [{ project: "JsonRepair.sln", expect: "fail", minFailedTests: 1 }],
       },
       final: {
         json: { files: ["appsettings.json"], expect: "pass" },
         dotnetTest: [{ project: "JsonRepair.sln", expect: "pass" }],
       },
     },
-    scoring: { precisionMode: "touch-list", allowedFiles: ["appsettings.json"], maxUnnecessaryFiles: 0 },
+    scoring: { precisionMode: "touch-list", allowedFiles: ["appsettings.json"], maxUnnecessaryFiles: 0, weights: { gates: 10 } },
   });
 }
 
@@ -257,7 +257,7 @@ public class BadString
     rootCause: "Six separate syntax errors, one per type.",
     correctFix: "Repair each error in place.",
     checks: {
-      initial: { dotnetBuild: [{ project: "SyntaxRepair.sln", expect: "fail" }] },
+      initial: { dotnetBuild: [{ project: "SyntaxRepair.sln", expect: "fail", minErrors: 6, errorPattern: "CS" }] },
       final: {
         dotnetBuild: [{ project: "SyntaxRepair.sln", expect: "pass" }],
         dotnetTest: [{ project: "SyntaxRepair.sln", expect: "pass" }],
@@ -579,7 +579,7 @@ public class RestraintHiddenTests
     correctFix: "Close the ToList call. Do not change PreferredDiscount or the tests.",
     hiddenCopy: [{ from: "RestraintHiddenTests.cs", to: "tests/Restraint.Tests/RestraintHiddenTests.cs" }],
     checks: {
-      initial: { dotnetBuild: [{ project: "Restraint.sln", expect: "fail" }] },
+      initial: { dotnetBuild: [{ project: "Restraint.sln", expect: "fail", minErrors: 1, errorPattern: "CS" }] },
       final: {
         dotnetBuild: [{ project: "Restraint.sln", expect: "pass" }],
         dotnetTest: [

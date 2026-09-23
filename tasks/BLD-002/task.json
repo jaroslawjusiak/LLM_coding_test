@@ -16,7 +16,9 @@
       "dotnetBuild": [
         {
           "project": "ThreeErrors.sln",
-          "expect": "fail"
+          "expect": "fail",
+          "minErrors": 3,
+          "errorPattern": "CS"
         }
       ]
     },

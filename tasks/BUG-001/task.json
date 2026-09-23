@@ -28,7 +28,8 @@
       "dotnetTest": [
         {
           "project": "CacheBug.sln",
-          "expect": "fail"
+          "expect": "fail",
+          "minFailedTests": 1
         }
       ]
     },

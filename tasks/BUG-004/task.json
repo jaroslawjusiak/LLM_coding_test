@@ -33,7 +33,8 @@
         {
           "project": "Notify.sln",
           "expect": "fail",
-          "includeHidden": true
+          "includeHidden": true,
+          "minFailedTests": 1
         }
       ]
     },
@@ -58,9 +59,17 @@
     "precisionMode": "max-files",
     "maxChangedFiles": 4,
     "requireRegressionTest": true,
+    "regressionTestPatterns": [
+      "duplicate",
+      "regression",
+      "flush"
+    ],
     "rootCausePatterns": [
       "enqueue",
       "outbox"
-    ]
+    ],
+    "weights": {
+      "gates": 10
+    }
   }
 }

@@ -3,13 +3,13 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { countBuildErrors, environmentFailure, parseDotnetTest, parseFileBlocks, parseVitest, toolchainMissing, type CheckOutcome } from "../src/checks.ts";
+import { countBuildErrors, environmentFailure, failureEvidenced, parseDotnetTest, parseFileBlocks, parseVitest, toolchainMissing, type CheckOutcome } from "../src/checks.ts";
 import { lineDiffCounts, matchGroups, maxIndentDepth } from "../src/diff.ts";
 import { loadTasks, type LoadedTask } from "../src/manifest.ts";
 import { repoRootFromHere } from "../src/files.ts";
 import { DOTNET_ENV } from "../src/process.ts";
 import { describeFailure } from "../src/runModel.ts";
-import { renderReport, scoreSubmission, weightsFor } from "../src/score.ts";
+import { hasRegressionTest, renderReport, scoreSubmission, weightsFor } from "../src/score.ts";
 
 test("file blocks parse writes and deletes", () => {
   const parsed = parseFileBlocks(`notes
@@ -171,8 +171,12 @@ test("the .NET CLI is pinned to English so summaries parse", () => {
 test("a task scores only the dimensions it declares", () => {
   const root = repoRootFromHere(import.meta.url);
   const syntax = weightsFor(loadTasks(root, "SYN-001")[0]);
-  assert.equal(syntax.maxScore, 35);
+  assert.equal(syntax.maxScore, 45);
+  assert.equal(syntax.weights.gates, 10);
   assert.deepEqual(syntax.excluded, ["build", "hidden tests", "findings", "root cause"]);
+  const regression = weightsFor(loadTasks(root, "BUG-004")[0]);
+  assert.equal(regression.maxScore, 90);
+  assert.equal(regression.weights.regressionTest, 10);
   const analysis = weightsFor(loadTasks(root, "SPEC-005")[0]);
   assert.equal(analysis.maxScore, 100);
   assert.deepEqual(analysis.excluded, []);
@@ -194,6 +198,55 @@ test("hidden test output is never sent back to the model", () => {
 
   const visible = describeFailure({ name: "dotnet test Notify.sln pass", ok: false, detail: "Assert.Equal() Failure: Expected 404" });
   assert.match(visible, /Expected 404/);
+});
+
+test("a red baseline needs evidence that tests ran and failed", () => {
+  // The defect: one test executed and failed.
+  assert.equal(failureEvidenced("fail", { failedTests: 1, passedTests: 2, totalTests: 3 }, 1), true);
+  // The build broke, so no test ran: not the expected defect.
+  assert.equal(failureEvidenced("fail", {}, 1), false);
+  // A restore failure printed no summary either.
+  assert.equal(failureEvidenced("fail", { failedTests: 0, totalTests: 0 }, 1), false);
+  // Passing checks are never held to a failure count.
+  assert.equal(failureEvidenced("pass", { failedTests: 0, totalTests: 4 }, 1), true);
+  // Without the declaration the old behaviour stands.
+  assert.equal(failureEvidenced("fail", {}, undefined), true);
+});
+
+test("a regression test is recognised by its content, not its filename", () => {
+  const { submission, task } = syntaxFixture();
+  const tests = path.join(submission, "tests", "Notify.Tests");
+  mkdirSync(tests, { recursive: true });
+  writeFileSync(path.join(tests, "DispatchTests.cs"), "public class DispatchTests { [Fact] public void Retry_flush_does_not_send_a_duplicate() { } }\n");
+  const diff = {
+    files: [{ path: "tests/Notify.Tests/DispatchTests.cs", status: "modified" as const, added: 4, removed: 0 }],
+    filesChanged: 1,
+    linesAdded: 4,
+    linesRemoved: 0,
+  };
+  // No pattern declared: only the filename heuristic, which this file fails.
+  assert.equal(hasRegressionTest(diff, submission), false);
+  // BUG-004 declares patterns, so the same edit earns the points.
+  assert.equal(hasRegressionTest(diff, submission, task.manifest.scoring.regressionTestPatterns), false);
+  assert.equal(hasRegressionTest(diff, submission, ["duplicate", "regression", "flush"]), true);
+});
+
+test("declared gates are scored, so a json check is not free", () => {
+  const { original, submission, task } = syntaxFixture();
+  task.manifest.checks.final.json = { files: ["appsettings.json"], expect: "pass" };
+  task.manifest.scoring.weights = { gates: 10 };
+  const passing: CheckOutcome[] = [
+    { name: "json pass", ok: true, detail: "parsed" },
+    { name: "dotnet test JsonRepair.sln pass", ok: true, passedTests: 1, failedTests: 0, totalTests: 1, detail: "1/1 passed" },
+  ];
+  const scored = scoreSubmission(task, original, submission, passing, [], "local-model", 1_000);
+  assert.equal(scored.maxScore, 45);
+  assert.equal(scored.score, 45);
+  assert.match(renderReport(scored), /gates: 100% of 10/);
+
+  const broken = scoreSubmission(task, original, submission, [{ ...passing[0], ok: false, detail: "unexpected token" }, passing[1]], [], "local-model", 1_000);
+  assert.equal(broken.score, 35);
+  assert.match(renderReport(broken), /gates: 0% of 10/);
 });
 
 test("spawn failures are recognised as a missing toolchain", () => {

@@ -28,7 +28,8 @@
       "dotnetTest": [
         {
           "project": "DockerTrap.sln",
-          "expect": "fail"
+          "expect": "fail",
+          "minFailedTests": 1
         }
       ]
     },

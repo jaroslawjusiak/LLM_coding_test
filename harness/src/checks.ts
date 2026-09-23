@@ -117,7 +117,7 @@ async function runCheckSetInPlace(workspace: string, checks: CheckSet, context: 
   }
   for (const check of checks.dotnetBuild ?? []) outcomes.push(await runDotnetBuild(workspace, check));
   for (const check of checks.dotnetTest ?? []) outcomes.push(await runDotnetTest(workspace, check, context));
-  for (const check of checks.npm ?? []) outcomes.push(await runNpm(workspace, check.script, check.expect, check.cwd, context, check.includeHidden));
+  for (const check of checks.npm ?? []) outcomes.push(await runNpm(workspace, check.script, check.expect, check.cwd, context, check.includeHidden, check.minFailedTests));
   return outcomes;
 }
 
@@ -214,18 +214,20 @@ async function runDotnetTest(workspace: string, check: DotnetCheck, context: Che
     }
   }
   const passed = result.code === 0 && !result.timedOut && summarised && (counts.failedTests ?? 0) === 0 && (counts.totalTests ?? 0) > 0;
-  const ok = check.expect === "pass" ? passed : !passed;
+  const failedTests = counts.failedTests ?? 0;
+  const ok = (check.expect === "pass" ? passed : !passed) && failureEvidenced(check.expect, counts, check.minFailedTests);
+  const expected = check.expect === "fail" && check.minFailedTests ? `, at least ${check.minFailedTests} failed` : "";
   return {
     name,
     ok,
     ...counts,
-    detail: result.timedOut ? "timed out" : `${counts.passedTests ?? 0}/${counts.totalTests ?? 0} passed\n${tail(result.output, 30)}`,
+    detail: result.timedOut ? "timed out" : `${counts.passedTests ?? 0}/${counts.totalTests ?? 0} passed, ${failedTests} failed${expected}\n${tail(result.output, 30)}`,
   };
 }
 
 const installed = new Set<string>();
 
-async function runNpm(workspace: string, script: "build" | "test", expect: "pass" | "fail", cwd: string | undefined, context: CheckContext, includeHidden?: boolean): Promise<CheckOutcome> {
+async function runNpm(workspace: string, script: "build" | "test", expect: "pass" | "fail", cwd: string | undefined, context: CheckContext, includeHidden?: boolean, minFailedTests?: number): Promise<CheckOutcome> {
   if (includeHidden && context.hiddenDir && context.manifest) copyHidden(context.hiddenDir, workspace, context.manifest.hiddenCopy);
   const dir = cwd ? path.join(workspace, cwd) : workspace;
   const name = `npm ${script} ${expect}${includeHidden ? " +hidden" : ""}`;
@@ -251,12 +253,14 @@ async function runNpm(workspace: string, script: "build" | "test", expect: "pass
     if (environment) return environmentSkip("npm", name, environment.reason, environment.signature);
   }
   const passed = result.code === 0 && !result.timedOut;
-  const ok = expect === "pass" ? passed : !passed;
+  const failedTests = counts.failedTests ?? 0;
+  const ok = (expect === "pass" ? passed : !passed) && failureEvidenced(expect, counts, minFailedTests);
+  const expected = expect === "fail" && minFailedTests ? `, at least ${minFailedTests} failed` : "";
   return {
     name,
     ok,
     ...counts,
-    detail: result.timedOut ? "timed out" : `exit ${result.code}\n${tail(result.output, 30)}`,
+    detail: result.timedOut ? "timed out" : `exit ${result.code}, ${counts.passedTests ?? 0}/${counts.totalTests ?? 0} passed, ${failedTests} failed${expected}\n${tail(result.output, 30)}`,
   };
 }
 
@@ -264,6 +268,20 @@ async function runNpm(workspace: string, script: "build" | "test", expect: "pass
 export function toolchainMissing(result: { code: number; output: string; missing?: boolean }): boolean {
   if (result.missing) return true;
   return result.code === 127 && /is not recognized as an internal or external command|command not found/i.test(result.output);
+}
+
+/**
+ * A red baseline has to be red because tests ran and failed. Without evidence, any
+ * collapse of the run looks like the expected defect, including one the submission
+ * did not cause and one the machine did.
+ */
+export function failureEvidenced(
+  expect: "pass" | "fail",
+  counts: { failedTests?: number; totalTests?: number },
+  minFailedTests?: number,
+): boolean {
+  if (expect !== "fail" || !minFailedTests) return true;
+  return counts.totalTests !== undefined && (counts.failedTests ?? 0) >= minFailedTests;
 }
 
 export function countBuildErrors(output: string, codePrefix?: string): number {
