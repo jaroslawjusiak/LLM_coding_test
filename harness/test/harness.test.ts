@@ -7,7 +7,7 @@ import { countBuildErrors, environmentFailure, failureEvidenced, parseDotnetTest
 import { lineDiffCounts, matchGroups, maxIndentDepth } from "../src/diff.ts";
 import { loadTasks, type LoadedTask } from "../src/manifest.ts";
 import { repoRootFromHere } from "../src/files.ts";
-import { DOTNET_ENV } from "../src/process.ts";
+import { DOTNET_ENV, NPM_ENV, stripAnsi } from "../src/process.ts";
 import { describeFailure } from "../src/runModel.ts";
 import { hasRegressionTest, renderReport, scoreSubmission, weightsFor } from "../src/score.ts";
 
@@ -159,6 +159,8 @@ test("error counts can be restricted to compiler errors", () => {
 
 test("the .NET CLI is pinned to English so summaries parse", () => {
   assert.equal(DOTNET_ENV.DOTNET_CLI_UI_LANGUAGE, "en");
+  assert.equal(DOTNET_ENV.NO_COLOR, "1");
+  assert.equal(NPM_ENV.NO_COLOR, "1");
   assert.deepEqual(parseDotnetTest("Passed!  - Failed:     0, Passed:     1, Skipped:     0, Total:     1"), {
     failedTests: 0,
     passedTests: 1,
@@ -247,6 +249,21 @@ test("declared gates are scored, so a json check is not free", () => {
   const broken = scoreSubmission(task, original, submission, [{ ...passing[0], ok: false, detail: "unexpected token" }, passing[1]], [], "local-model", 1_000);
   assert.equal(broken.score, 35);
   assert.match(renderReport(broken), /gates: 0% of 10/);
+});
+
+test("colour codes do not hide a test summary", () => {
+  // What vitest prints when CI is set: the numbers are wrapped in escapes, so the
+  // summary used to parse as zero tests and a red baseline had no evidence.
+  const coloured = "\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[31m1 failed\u001b[39m\u001b[22m\u001b[90m (1)\u001b[39m\n" +
+    "\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[31m2 failed\u001b[39m\u001b[22m\u001b[90m (2)\u001b[39m\n";
+  assert.equal(parseVitest(coloured).totalTests, undefined);
+  assert.deepEqual(parseVitest(stripAnsi(coloured)), { failedTests: 2, passedTests: 0, totalTests: 2 });
+
+  const dotnet = "Failed!  - Failed:     \u001b[31m2\u001b[39m, Passed:     3, Skipped:     0, Total:     5";
+  assert.equal(parseDotnetTest(dotnet).totalTests, undefined);
+  assert.deepEqual(parseDotnetTest(stripAnsi(dotnet)), { failedTests: 2, passedTests: 3, totalTests: 5 });
+  assert.equal(countBuildErrors(stripAnsi("\u001b[31merror CS1002:\u001b[39m ; expected")), 1);
+  assert.equal(stripAnsi("\u001b]0;title\u0007plain\u001b[0m"), "plain");
 });
 
 test("spawn failures are recognised as a missing toolchain", () => {
